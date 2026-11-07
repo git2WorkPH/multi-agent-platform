@@ -1,6 +1,6 @@
 # Local-first multi-agent platform
 
-Phase 1 provides the local AWS infrastructure and the v1 agent result contract.
+Two independent agents publish evidence to a local AWS-compatible stack. A background worker consolidates stored results into versioned reports with a deterministic Mock or local Ollama provider.
 
 Use the Node version in `.node-version`, pnpm 11.25.0, and Docker Compose.
 
@@ -55,3 +55,11 @@ Run `pnpm work:consolidation` alongside the result consumer for automatic report
 ## Open the dashboard
 
 Run `pnpm dashboard` after starting the API, consumer, and worker. The dashboard shows publisher activity, agent evidence, jobs, and report revisions. See [dashboard operations](docs/operations/dashboard.md) for setup, credentials, and browser tests.
+
+## Architecture and verification
+
+- [Architecture overview](docs/architecture/overview.md)
+- [Setup and troubleshooting](docs/operations/setup.md)
+- [Acceptance criteria and verification commands](docs/testing/verification.md)
+- [Event-driven architecture](docs/learning/event-driven-architecture.md)
+- [AWS with Floci](docs/learning/aws-with-floci.md)

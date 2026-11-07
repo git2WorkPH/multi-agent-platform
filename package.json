@@ -14,13 +14,14 @@
     "agent:research": "node agents/research-agent/run.ts",
     "agent:analysis": "node agents/analysis-agent/run.ts",
     "consume:results": "node apps/result-consumer/run.ts",
-    "test:ollama": "vitest run tests/ollama",
+    "test:ollama": "vitest run tests/ollama/",
     "consolidate": "node apps/consolidation-worker/run-once.ts",
     "api": "node apps/api/run.ts",
     "work:consolidation": "node apps/consolidation-worker/run.ts",
     "dashboard": "pnpm --filter @multi-agent-platform/dashboard dev",
     "build:dashboard": "pnpm --filter @multi-agent-platform/dashboard build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:ollama-stack": "vitest run tests/ollama-stack"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",

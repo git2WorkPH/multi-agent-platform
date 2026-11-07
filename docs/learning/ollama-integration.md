@@ -22,3 +22,14 @@ The adapter checks `GET /api/tags` before submitting non-streaming chat with a Z
 See the [chat API](https://docs.ollama.com/api/chat), [model listing API](https://docs.ollama.com/api/tags), and [Docker setup](https://docs.ollama.com/docker).
 
 If the native Metal runner exits while loading or generating, set `OLLAMA_NUM_GPU=0` to run inference on the CPU. For example, use `OLLAMA_MODEL=qwen2.5:7b OLLAMA_NUM_GPU=0 pnpm test:ollama` with that tag installed. Model listing verifies the tag is advertised. The smoke test also verifies that the server can load it and generate a report.
+
+Run the provider directly from the repository root on the pinned Node version:
+
+```sh
+AI_PROVIDER=ollama OLLAMA_MODEL=qwen2.5:7b OLLAMA_NUM_GPU=0 node --input-type=module <<'JS'
+import { createModelProvider } from "./packages/ai/index.ts";
+import { request } from "./tests/fixtures/model-request.ts";
+const result = await createModelProvider().generate(request);
+console.log(result.model, result.report.findings.map(finding => finding.sourceEventIds));
+JS
+```

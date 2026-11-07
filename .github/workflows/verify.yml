@@ -1,0 +1,40 @@
+name: Verify platform
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AI_PROVIDER: mock
+      LOCAL_RESOURCE_PREFIX: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm build:dashboard && pnpm test
+      - run: docker compose -f infrastructure/docker-compose.yml up -d
+      - name: Wait for Floci
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4566/_floci/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker compose -f infrastructure/docker-compose.yml logs
+          exit 1
+      - run: pnpm test:floci
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

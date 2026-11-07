@@ -4,3 +4,7 @@ coverage/
 dist/
 test-results/
 playwright-report/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan

@@ -9,5 +9,15 @@ services:
       FLOCI_STORAGE_PERSISTENT_PATH: /app/data
     volumes:
       - floci-data:/app/data
+  ollama:
+    image: ollama/ollama:0.18.1@sha256:5949ec041e62b28f92d5ff1d7c34080ec67efd73ad24a523e2ff558a24f33072
+    profiles: ["ollama"]
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    volumes:
+      - ollama-models:/root/.ollama
 volumes:
   floci-data:
+  ollama-models:
