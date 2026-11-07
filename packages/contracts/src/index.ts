@@ -41,3 +41,4 @@ export function parseAgentResultEvent(input: unknown): AgentResultEvent {
 }
 
 export * from "./model.ts";
+export * from "./consolidation.ts";

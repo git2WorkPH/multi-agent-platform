@@ -37,3 +37,13 @@ The consumer acknowledges deliveries after storing them. Malformed and conflicti
 ## Model providers
 
 Set `AI_PROVIDER=mock` for deterministic simulated output or `AI_PROVIDER=ollama` for local inference. Run `pnpm test:ollama` with a reachable server and installed `OLLAMA_MODEL`. See [Ollama setup](docs/learning/ollama-integration.md) and [AI mocking examples](docs/learning/ai-mocking.md).
+
+## Run a standalone consolidation
+
+After the consumer stores results, run:
+
+```sh
+AI_PROVIDER=mock pnpm consolidate demo sample demo-run
+```
+
+The topic and correlation ID are optional. Supply an empty topic argument to filter only by correlation ID. Set `CONSOLIDATION_EXPECTED_AGENTS` to a comma-separated list of expected publishers and `CONSOLIDATION_STALE_MS` to a freshness threshold. Each new run creates a report revision. To retry the same run after a failure, set `CONSOLIDATION_RUN_ID` to the same UUID on each attempt. See [consolidation design](docs/learning/consolidation-design.md).

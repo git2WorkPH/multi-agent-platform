@@ -14,7 +14,8 @@
     "agent:research": "node agents/research-agent/run.ts",
     "agent:analysis": "node agents/analysis-agent/run.ts",
     "consume:results": "node apps/result-consumer/run.ts",
-    "test:ollama": "vitest run tests/ollama"
+    "test:ollama": "vitest run tests/ollama",
+    "consolidate": "node apps/consolidation-worker/run-once.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",

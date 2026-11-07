@@ -1,11 +1,13 @@
-import { GetItemCommand, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
+import { GetItemCommand, QueryCommand, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
+import type { AttributeValue } from "@aws-sdk/client-dynamodb";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { AgentResultEvent } from "../contracts/src/index.ts";
 import { artifactLimit, artifactNamespace, canonicalJson, digest, inlineLimit } from "../core/results.ts";
+import type { ConsolidationResultReader } from "../core/consolidation.ts";
 import type { ResultStore } from "../core/results.ts";
 import type { localAws } from "../../infrastructure/bootstrap/resources.ts";
 
-export class AwsResultStore implements ResultStore {
+export class AwsResultStore implements ResultStore, ConsolidationResultReader {
   constructor(
     privateConfig: Pick<ReturnType<typeof localAws>, "dynamo" | "s3">,
     table: string,
@@ -19,6 +21,39 @@ export class AwsResultStore implements ResultStore {
   private readonly aws;
   private readonly table;
   private readonly bucket;
+
+  async *projectResults(projectId: string): AsyncGenerator<unknown> {
+    let cursor: Record<string, AttributeValue> | undefined;
+    do {
+      const page = await this.aws.dynamo.send(new QueryCommand({
+        TableName: this.table, ConsistentRead: true, ExclusiveStartKey: cursor, Limit: 100,
+        KeyConditionExpression: "pk = :project AND begins_with(sk, :prefix)",
+        ExpressionAttributeValues: { ":project": { S: `project#${digest(projectId)}` }, ":prefix": { S: "result#" } },
+      }));
+      for (const item of page.Items ?? []) yield JSON.parse(item.event.S ?? "null");
+      cursor = page.LastEvaluatedKey;
+    } while (cursor && Object.keys(cursor).length);
+  }
+
+  async readArtifact(event: AgentResultEvent & { artifactKey: string }): Promise<Uint8Array> {
+    const namespace = artifactNamespace(event.projectId) + digest(event.contentType) + "/";
+    const expected = event.artifactKey.slice(namespace.length);
+    if (!event.artifactKey.startsWith(namespace) || !/^[a-f0-9]{64}$/.test(expected)) {
+      throw new Error("Invalid managed artifact key");
+    }
+    const object = await this.aws.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: event.artifactKey }));
+    const body = object.Body?.transformToWebStream();
+    if (!body) throw new Error("Missing artifact body");
+    if (object.ContentType !== event.contentType || (object.ContentLength ?? Infinity) > artifactLimit) {
+      await body.cancel();
+      throw new Error("Artifact content type or size is invalid");
+    }
+    const bytes = await new Response(body).arrayBuffer();
+    if (bytes.byteLength > artifactLimit || digest(new Uint8Array(bytes)) !== expected) {
+      throw new Error("Artifact size or digest mismatch");
+    }
+    return new Uint8Array(bytes);
+  }
 
   async save(event: AgentResultEvent): Promise<"stored" | "duplicate"> {
     const fingerprint = digest(canonicalJson(event));
@@ -35,21 +70,7 @@ export class AwsResultStore implements ResultStore {
     const namespace = artifactNamespace(event.projectId) + digest(event.contentType) + "/";
     let stored = event;
     if (event.artifactKey !== undefined) {
-      const expected = event.artifactKey.slice(namespace.length);
-      if (!event.artifactKey.startsWith(namespace) || !/^[a-f0-9]{64}$/.test(expected)) {
-        throw new Error("Invalid managed artifact key");
-      }
-      const object = await this.aws.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: event.artifactKey }));
-      const body = object.Body?.transformToWebStream();
-      if (!body) throw new Error("Missing artifact body");
-      if (object.ContentType !== event.contentType || (object.ContentLength ?? Infinity) > artifactLimit) {
-        await body.cancel();
-        throw new Error("Artifact content type or size is invalid");
-      }
-      const bytes = await new Response(body).arrayBuffer();
-      if (bytes.byteLength > artifactLimit || digest(new Uint8Array(bytes)) !== expected) {
-        throw new Error("Artifact size or digest mismatch");
-      }
+      await this.readArtifact({ ...event, artifactKey: event.artifactKey });
     } else {
       const body = canonicalJson(event.data);
       const length = Buffer.byteLength(body);
