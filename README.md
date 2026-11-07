@@ -51,3 +51,7 @@ The topic and correlation ID are optional. Supply an empty topic argument to fil
 ## Run the hybrid scheduler and API
 
 Run `pnpm work:consolidation` alongside the result consumer for automatic reports. Start `API_AUTH_MODE=development API_DEV_PROJECTS=demo pnpm api` for local API access and manual requests. See [API and worker operations](docs/operations/api.md) for authentication, polling, and request examples.
+
+## Open the dashboard
+
+Run `pnpm dashboard` after starting the API, consumer, and worker. The dashboard shows publisher activity, agent evidence, jobs, and report revisions. See [dashboard operations](docs/operations/dashboard.md) for setup, credentials, and browser tests.

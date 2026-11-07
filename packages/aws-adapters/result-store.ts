@@ -91,13 +91,16 @@ export class AwsResultStore implements ResultStore, ConsolidationResultReader {
     const projectKey = `project#${digest(event.projectId)}`;
     const revisionKey = digest(canonicalJson([event.agentId, event.resultId, event.revision]));
     const timestamp = new Date(event.occurredAt).toISOString();
+    const resultKey = `result#${timestamp}#${event.eventId}`;
     try {
       await this.aws.dynamo.send(new TransactWriteItemsCommand({
         TransactItems: [
-          { Put: { TableName: this.table, Item: { ...receipt, fingerprint: { S: fingerprint } },
+          { Put: { TableName: this.table, Item: {
+            ...receipt, fingerprint: { S: fingerprint }, resultPk: { S: projectKey }, resultSk: { S: resultKey },
+          },
             ConditionExpression: "attribute_not_exists(pk)" } },
           { Put: { TableName: this.table, Item: {
-            pk: { S: projectKey }, sk: { S: `result#${timestamp}#${event.eventId}` },
+            pk: { S: projectKey }, sk: { S: resultKey },
             indexPk: { S: `${projectKey}#topic#${digest(event.topic)}` },
             indexSk: { S: `${timestamp}#${event.eventId}` },
             event: { S: canonicalJson(stored) },

@@ -149,7 +149,7 @@ export async function buildApi(deps: {
     project(request, id);
     const query = resultsQuery.parse(request.query);
     return output(apiResultPage, await deps.queries.results(id, query.topic, {
-      ...requestPage(query), from: query.from, to: query.to,
+      ...requestPage(query), from: query.from, to: query.to, eventId: query.eventId,
     }));
   });
 

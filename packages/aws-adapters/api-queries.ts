@@ -9,7 +9,7 @@ export class InvalidCursor extends Error {}
 
 type Key = Record<string, AttributeValue>;
 type PageOptions = { limit: number; cursor?: string };
-type ResultPageOptions = PageOptions & { from?: string; to?: string };
+type ResultPageOptions = PageOptions & { from?: string; to?: string; eventId?: string };
 
 function decodeCursor(cursor: string | undefined, scope: string, partitionName: string, partition: string, indexed: boolean) {
   if (!cursor) return undefined;
@@ -71,10 +71,35 @@ export class AwsApiQueries {
 
   async results(project: string, topic: string | undefined, options: ResultPageOptions) {
     const partition = `project#${digest(project)}`;
+    if (options.eventId) {
+      const event = await this.#resultByEvent(partition, options.eventId);
+      return { items: event ? [event] : [], nextCursor: null };
+    }
     const page = topic
       ? await this.#page(this.#results, `${partition}#topic#${digest(topic)}`, true, options)
       : await this.#page(this.#results, partition, false, options, "result#");
     return { ...page, items: page.items.map(item => parseAgentResultEvent(JSON.parse(item.event.S!))) };
+  }
+
+  async #resultByEvent(partition: string, eventId: string) {
+    const read = async (pk: string, sk: string) => (await this.#dynamo.send(new GetItemCommand({
+      TableName: this.#results, Key: { pk: { S: pk }, sk: { S: sk } }, ConsistentRead: true,
+    }))).Item;
+    const receipt = await read(`event#${eventId}`, "receipt");
+    if (!receipt) return undefined;
+    if (receipt.resultPk?.S !== undefined) {
+      if (receipt.resultPk.S !== partition || !receipt.resultSk?.S) return undefined;
+      const result = await read(partition, receipt.resultSk.S);
+      return result && parseAgentResultEvent(JSON.parse(result.event.S!));
+    }
+    // Older receipts contain only the fingerprint. Search the authorized project.
+    let cursor: string | undefined;
+    do {
+      const page = await this.#page(this.#results, partition, false, { limit: 50, cursor }, "result#");
+      const item = page.items.find(result => result.sk.S?.endsWith(`#${eventId}`));
+      if (item) return parseAgentResultEvent(JSON.parse(item.event.S!));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
   }
 
   async consolidations(project: string, kind: "reports" | "jobs", options: PageOptions) {

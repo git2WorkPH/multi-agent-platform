@@ -14,8 +14,11 @@ export const resultsQuery = z.strictObject({
   ...pagination, topic: consolidationScope.shape.topic,
   from: z.iso.datetime({ offset: true }).optional(),
   to: z.iso.datetime({ offset: true }).optional(),
+  eventId: z.uuid().optional(),
 }).refine(query => !query.from || !query.to || Date.parse(query.from) <= Date.parse(query.to),
-  "Result date range is reversed");
+  "Result date range is reversed")
+  .refine(query => !query.eventId || !(query.topic || query.from || query.to || query.cursor),
+    "Event lookup cannot be combined with result filters or a cursor");
 export const consolidationsQuery = z.strictObject({ ...pagination, kind: z.enum(["reports", "jobs"]).optional() });
 export const eventsQuery = z.strictObject({ projectId: consolidationScope.shape.projectId });
 export const createJobBody = z.strictObject({

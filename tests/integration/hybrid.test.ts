@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { expect, it } from "vitest";
 import { apiAuth } from "../../apps/api/auth.ts";
 import { buildApi } from "../../apps/api/server.ts";
@@ -41,7 +42,7 @@ async function fixture(debounceMs = 100) {
     await results.save(event);
     return event;
   };
-  return { now, advance, jobs, reports, results, queries, scope, provider, deps, publish };
+  return { aws, resources, now, advance, jobs, reports, results, queries, scope, provider, deps, publish };
 }
 
 it("coalesces durable changes, keeps a change made during work, and fences an expired worker", async () => {
@@ -92,12 +93,22 @@ it("authorizes and paginates API reads, streams scoped invalidations, reuses and
     ]) }),
   });
   try {
-    await f.publish("first");
+    const firstResult = await f.publish("first");
     await f.publish("second");
-    await f.publish("private", 1, "other");
+    const privateResult = await f.publish("private", 1, "other");
     const results = "/api/projects/demo/results";
     expect((await app.inject(results)).statusCode).toBe(401);
     expect((await app.inject({ url: results, headers: other })).statusCode).toBe(403);
+    const evidence = (await app.inject({ url: results + "?eventId=" + firstResult.eventId, headers })).json();
+    expect(evidence.items).toEqual([firstResult]);
+    await f.aws.dynamo.send(new UpdateItemCommand({
+      TableName: f.resources.results,
+      Key: { pk: { S: `event#${firstResult.eventId}` }, sk: { S: "receipt" } },
+      UpdateExpression: "REMOVE resultPk, resultSk",
+    }));
+    expect((await app.inject({ url: results + "?eventId=" + firstResult.eventId, headers })).json()).toEqual(evidence);
+    const forbiddenEvidence = (await app.inject({ url: results + "?eventId=" + privateResult.eventId, headers })).json();
+    expect(forbiddenEvidence).toEqual({ items: [], nextCursor: null });
     const page = (await app.inject({ url: results + "?limit=1", headers })).json();
     expect(page.items).toHaveLength(1);
     expect(page.nextCursor).toBeTruthy();

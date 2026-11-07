@@ -17,7 +17,10 @@
     "test:ollama": "vitest run tests/ollama",
     "consolidate": "node apps/consolidation-worker/run-once.ts",
     "api": "node apps/api/run.ts",
-    "work:consolidation": "node apps/consolidation-worker/run.ts"
+    "work:consolidation": "node apps/consolidation-worker/run.ts",
+    "dashboard": "pnpm --filter @multi-agent-platform/dashboard dev",
+    "build:dashboard": "pnpm --filter @multi-agent-platform/dashboard build",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",
@@ -29,6 +32,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
