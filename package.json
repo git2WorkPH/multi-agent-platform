@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run tests/unit",
     "test:floci": "vitest run tests/integration",
-    "bootstrap": "node infrastructure/bootstrap/resources.ts"
+    "bootstrap": "node infrastructure/bootstrap/resources.ts",
+    "agent:research": "node agents/research-agent/run.ts",
+    "agent:analysis": "node agents/analysis-agent/run.ts",
+    "consume:results": "node apps/result-consumer/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",

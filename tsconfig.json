@@ -8,7 +8,15 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["packages/**/*.ts", "infrastructure/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "packages/**/*.ts",
+    "infrastructure/**/*.ts",
+    "tests/**/*.ts",
+    "apps/**/*.ts",
+    "agents/**/*.ts"
+  ]
 }

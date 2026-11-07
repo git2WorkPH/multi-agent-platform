@@ -1,0 +1,7 @@
+# 002 Result ingestion
+
+Each example is an independent Node CLI and publishes the same validated wire format to SQS. The consumer depends on a result store port. A DynamoDB transaction conditionally records a global event receipt, the project-scoped result, and a logical revision guard. Duplicate deliveries compare a canonical fingerprint. A conflicting event ID or reused logical revision fails ingestion. A consistent receipt read resolves an ambiguous transaction response.
+
+The result partition orders items by UTC occurrence time and event ID, and a sparse index offers the same ordering for a topic. Payloads over 32 KiB are moved to S3 before the transaction. The managed object key includes the project digest, content-type digest, and body digest. Existing artifact references must match that namespace, content type, size, and SHA-256. Consumers of stored artifacts should verify the digest again when reading from S3. The SQS envelope budget is 240 KiB and managed artifacts are limited to 4 MiB.
+
+Storage-first writes avoid committed references to missing uploads. A failed transaction can leave an unreferenced object, which is safe to reuse or reconcile later. SQS visibility and redrive control delivery attempts. The process backs off after errors and acknowledges only after a successful store or verified duplicate. The consolidation scope and durable scheduling transaction are reserved for Phase 5.

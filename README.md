@@ -14,3 +14,22 @@ LOCAL_RESOURCE_PREFIX=phase1-probe-$(date +%s) pnpm test:floci
 ```
 
 The bootstrap prints the names and URLs it provisioned. It is safe to rerun with the same configuration. For overrides, export the desired variables from `.env.example` or invoke Node with `--env-file`. If changing `FLOCI_PORT`, set `LOCAL_AWS_ENDPOINT` to the matching host port. See [Floci operations](docs/operations/floci.md) for restart verification and [contract evolution](docs/architecture/decisions/001-local-substrate-and-contract.md) for the wire policy.
+
+## Run the example agents
+
+With Floci running and the resources bootstrapped, start the consumer in one terminal.
+
+```sh
+pnpm consume:results
+```
+
+Publish each result independently from another terminal.
+
+```sh
+pnpm agent:research
+pnpm agent:analysis
+```
+
+Set `RESEARCH_FIXTURE` to a JSON array of findings or `ANALYSIS_FIXTURE` to a JSON array of numbers to use your own inputs. Both agents accept `AGENT_PROJECT_ID`, `AGENT_TOPIC`, and `AGENT_CORRELATION_ID`. Set `AGENT_RESULT_ID` and `AGENT_REVISION` to publish a new revision of an existing result. To replay the same publication across processes, also pin `AGENT_EVENT_ID` and `AGENT_OCCURRED_AT` and keep the payload and scope identical.
+
+The consumer acknowledges deliveries after storing them. Malformed and conflicting deliveries remain eligible for SQS dead-letter routing. See [the ingestion decision](docs/architecture/decisions/002-result-ingestion.md) for storage and retry behavior.

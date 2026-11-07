@@ -10,13 +10,12 @@ import {
 } from "@aws-sdk/client-s3";
 import type { BucketLocationConstraint } from "@aws-sdk/client-s3";
 
-export function localAws() {
+export function localAws(prefix = process.env.LOCAL_RESOURCE_PREFIX ?? "multi-agent") {
   const endpoint = new URL(process.env.LOCAL_AWS_ENDPOINT ?? "http://127.0.0.1:4566");
   if (endpoint.protocol !== "http:" || !["127.0.0.1", "localhost", "floci"].includes(endpoint.hostname)
     || endpoint.username || endpoint.password || endpoint.pathname !== "/" || endpoint.search || endpoint.hash) {
     throw new Error("LOCAL_AWS_ENDPOINT must be an HTTP loopback or Compose Floci endpoint");
   }
-  const prefix = process.env.LOCAL_RESOURCE_PREFIX ?? "multi-agent";
   if (!/^[a-z][a-z0-9-]{2,39}$/.test(prefix)) throw new Error("Invalid LOCAL_RESOURCE_PREFIX");
   const region = process.env.AWS_REGION ?? "us-east-1";
   const config = {
