@@ -1,4 +1,8 @@
-import { GetItemCommand, PutItemCommand, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
+import {
+  GetItemCommand,
+  PutItemCommand,
+  TransactWriteItemsCommand,
+} from "@aws-sdk/client-dynamodb";
 import type { DynamoDBClient, TransactWriteItem } from "@aws-sdk/client-dynamodb";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { S3Client } from "@aws-sdk/client-s3";
@@ -10,7 +14,12 @@ import { signalChange } from "./jobs.ts";
 
 const runKey = (id: string) => ({ pk: { S: `run#${id}` }, sk: { S: "capture" } });
 const scopeId = (scope: ConsolidationScope) => digest(canonicalJson(scope));
-const reuseKey = (scope: ConsolidationScope, fingerprint: string, provider: string, model: string) => ({
+const reuseKey = (
+  scope: ConsolidationScope,
+  fingerprint: string,
+  provider: string,
+  model: string,
+) => ({
   pk: { S: `report#${scopeId(scope)}` },
   sk: { S: `reuse#${digest(canonicalJson([1, fingerprint, provider, model]))}` },
 });
@@ -22,7 +31,12 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
   readonly #bucket: string;
   readonly #fence?: () => TransactWriteItem;
 
-  constructor(aws: { dynamo: DynamoDBClient; s3: S3Client }, table: string, bucket: string, fence?: () => TransactWriteItem) {
+  constructor(
+    aws: { dynamo: DynamoDBClient; s3: S3Client },
+    table: string,
+    bucket: string,
+    fence?: () => TransactWriteItem,
+  ) {
     this.#dynamo = aws.dynamo;
     this.#s3 = aws.s3;
     this.#table = table;
@@ -31,21 +45,32 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
   }
 
   async #run(runId: string, scope: ConsolidationScope) {
-    const { Item } = await this.#dynamo.send(new GetItemCommand({
-      TableName: this.#table, Key: runKey(runId), ConsistentRead: true,
-    }));
-    if (Item && Item.scopeId?.S !== scopeId(scope)) throw new Error("Run ID belongs to a different scope");
+    const { Item } = await this.#dynamo.send(
+      new GetItemCommand({
+        TableName: this.#table,
+        Key: runKey(runId),
+        ConsistentRead: true,
+      }),
+    );
+    if (Item && Item.scopeId?.S !== scopeId(scope))
+      throw new Error("Run ID belongs to a different scope");
     return Item;
   }
 
   async #write(kind: "snapshots" | "reports", value: unknown) {
     const Body = canonicalJson(value);
-    if (Buffer.byteLength(Body) > artifactLimit) throw new Error("Consolidation artifact exceeds the storage budget");
+    if (Buffer.byteLength(Body) > artifactLimit)
+      throw new Error("Consolidation artifact exceeds the storage budget");
     const hash = digest(Body);
     const Key = `consolidations/${kind}/${hash}.json`;
-    await this.#s3.send(new PutObjectCommand({
-      Bucket: this.#bucket, Key, Body, ContentType: "application/json",
-    }));
+    await this.#s3.send(
+      new PutObjectCommand({
+        Bucket: this.#bucket,
+        Key,
+        Body,
+        ContentType: "application/json",
+      }),
+    );
     return { Key, hash };
   }
 
@@ -58,7 +83,8 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
       throw new Error("Consolidation artifact exceeds the storage budget");
     }
     const body = await object.Body?.transformToString();
-    if (body === undefined || digest(body) !== expected) throw new Error("Consolidation artifact digest mismatch");
+    if (body === undefined || digest(body) !== expected)
+      throw new Error("Consolidation artifact digest mismatch");
     return JSON.parse(body);
   }
 
@@ -68,7 +94,10 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
     const snapshotKey = item.snapshotKey.S!;
     const inputFingerprint = item.inputFingerprint.S!;
     const input = consolidationInput.parse(await this.#read(snapshotKey));
-    if (scopeId(input.scope) !== scopeId(scope) || digest(canonicalJson(input)) !== inputFingerprint) {
+    if (
+      scopeId(input.scope) !== scopeId(scope) ||
+      digest(canonicalJson(input)) !== inputFingerprint
+    ) {
       throw new Error("Stored snapshot does not match the run");
     }
     return { input, inputFingerprint, snapshotKey };
@@ -79,14 +108,19 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
     if (existing) return existing;
     const { Key: snapshotKey, hash: inputFingerprint } = await this.#write("snapshots", input);
     try {
-      await this.#dynamo.send(new PutItemCommand({
-        TableName: this.#table,
-        Item: {
-          ...runKey(runId), scopeId: { S: scopeId(input.scope) }, scope: { S: canonicalJson(input.scope) },
-          snapshotKey: { S: snapshotKey }, inputFingerprint: { S: inputFingerprint },
-        },
-        ConditionExpression: "attribute_not_exists(pk)",
-      }));
+      await this.#dynamo.send(
+        new PutItemCommand({
+          TableName: this.#table,
+          Item: {
+            ...runKey(runId),
+            scopeId: { S: scopeId(input.scope) },
+            scope: { S: canonicalJson(input.scope) },
+            snapshotKey: { S: snapshotKey },
+            inputFingerprint: { S: inputFingerprint },
+          },
+          ConditionExpression: "attribute_not_exists(pk)",
+        }),
+      );
     } catch (error) {
       const winner = await this.getCapture(runId, input.scope);
       if (winner) return winner;
@@ -100,29 +134,47 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
     const key = item?.reportKey?.S;
     if (!key) return undefined;
     const report = consolidationReport.parse(await this.#read(key));
-    if (report.runId !== runId || report.reportId !== scopeId(scope)
-      || scopeId(report.scope) !== report.reportId || report.inputFingerprint !== item.inputFingerprint.S) {
+    if (
+      report.runId !== runId ||
+      report.reportId !== scopeId(scope) ||
+      scopeId(report.scope) !== report.reportId ||
+      report.inputFingerprint !== item.inputFingerprint.S
+    ) {
       throw new Error("Stored report does not match the run");
     }
     return report;
   }
 
   async getReportScope(runId: string) {
-    const { Item } = await this.#dynamo.send(new GetItemCommand({
-      TableName: this.#table, Key: runKey(runId), ConsistentRead: true,
-    }));
+    const { Item } = await this.#dynamo.send(
+      new GetItemCommand({
+        TableName: this.#table,
+        Key: runKey(runId),
+        ConsistentRead: true,
+      }),
+    );
     const key = Item?.reportKey?.S;
     if (!key) return undefined;
     if (Item.scope?.S) return consolidationInput.shape.scope.parse(JSON.parse(Item.scope.S));
     const report = consolidationReport.parse(await this.#read(key));
-    if (report.runId !== runId || report.reportId !== Item.scopeId.S) throw new Error("Invalid report run");
+    if (report.runId !== runId || report.reportId !== Item.scopeId.S)
+      throw new Error("Invalid report run");
     return report.scope;
   }
 
-  async findReusable(scope: ConsolidationScope, fingerprint: string, provider: string, model: string) {
-    const { Item } = await this.#dynamo.send(new GetItemCommand({
-      TableName: this.#table, Key: reuseKey(scope, fingerprint, provider, model), ConsistentRead: true,
-    }));
+  async findReusable(
+    scope: ConsolidationScope,
+    fingerprint: string,
+    provider: string,
+    model: string,
+  ) {
+    const { Item } = await this.#dynamo.send(
+      new GetItemCommand({
+        TableName: this.#table,
+        Key: reuseKey(scope, fingerprint, provider, model),
+        ConsistentRead: true,
+      }),
+    );
     return Item?.runId.S ? this.getReport(Item.runId.S, scope) : undefined;
   }
 
@@ -134,61 +186,104 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
     for (let attempt = 0; attempt < 5; attempt++) {
       const existing = await this.getReport(runId, scope);
       if (existing) return existing;
-      const { Item: head } = await this.#dynamo.send(new GetItemCommand({
-        TableName: this.#table, Key: headKey, ConsistentRead: true,
-      }));
+      const { Item: head } = await this.#dynamo.send(
+        new GetItemCommand({
+          TableName: this.#table,
+          Key: headKey,
+          ConsistentRead: true,
+        }),
+      );
       const revision = Number(head?.revision.N ?? 0) + 1;
       const report = consolidationReport.parse({ ...draft, revision });
       const { Key: reportKey } = await this.#write("reports", report);
       try {
-        await this.#dynamo.send(new TransactWriteItemsCommand({
-          TransactItems: [
-            ...(this.#fence ? [this.#fence()] : []),
-            signalChange(this.#table, scope.projectId),
-            { Put: {
-              TableName: this.#table, Item: { ...headKey, revision: { N: String(revision) } },
-              ConditionExpression: head ? "revision = :previous" : "attribute_not_exists(pk)",
-              ExpressionAttributeValues: head ? { ":previous": { N: String(revision - 1) } } : undefined,
-            } },
-            { Put: {
-              TableName: this.#table,
-              Item: {
-                pk, sk: { S: `revision#${String(revision).padStart(16, "0")}` },
-                reportKey: { S: reportKey }, runId: { S: runId },
-                indexPk: { S: `project#${digest(scope.projectId)}` },
-                indexSk: { S: `${report.generatedAt}#${reportId}#${String(revision).padStart(16, "0")}` },
-                generatedAt: { S: report.generatedAt }, inputFingerprint: { S: inputFingerprint },
-                reportId: { S: reportId }, revision: { N: String(revision) },
-                status: { S: report.status }, provider: { S: report.generation.provider },
-                model: { S: report.generation.model }, scope: { S: canonicalJson(scope) },
+        await this.#dynamo.send(
+          new TransactWriteItemsCommand({
+            TransactItems: [
+              ...(this.#fence ? [this.#fence()] : []),
+              signalChange(this.#table, scope.projectId),
+              {
+                Put: {
+                  TableName: this.#table,
+                  Item: { ...headKey, revision: { N: String(revision) } },
+                  ConditionExpression: head ? "revision = :previous" : "attribute_not_exists(pk)",
+                  ExpressionAttributeValues: head
+                    ? { ":previous": { N: String(revision - 1) } }
+                    : undefined,
+                },
               },
-              ConditionExpression: "attribute_not_exists(pk)",
-            } },
-            { Update: {
-              TableName: this.#table, Key: runKey(runId),
-              UpdateExpression: "SET reportKey = :report",
-              ConditionExpression: "scopeId = :scope AND inputFingerprint = :input AND snapshotKey = :snapshot AND attribute_not_exists(reportKey)",
-              ExpressionAttributeValues: {
-                ":report": { S: reportKey }, ":scope": { S: reportId }, ":input": { S: inputFingerprint },
-                ":snapshot": { S: draft.snapshotKey },
+              {
+                Put: {
+                  TableName: this.#table,
+                  Item: {
+                    pk,
+                    sk: { S: `revision#${String(revision).padStart(16, "0")}` },
+                    reportKey: { S: reportKey },
+                    runId: { S: runId },
+                    indexPk: { S: `project#${digest(scope.projectId)}` },
+                    indexSk: {
+                      S: `${report.generatedAt}#${reportId}#${String(revision).padStart(16, "0")}`,
+                    },
+                    generatedAt: { S: report.generatedAt },
+                    inputFingerprint: { S: inputFingerprint },
+                    reportId: { S: reportId },
+                    revision: { N: String(revision) },
+                    status: { S: report.status },
+                    provider: { S: report.generation.provider },
+                    model: { S: report.generation.model },
+                    scope: { S: canonicalJson(scope) },
+                  },
+                  ConditionExpression: "attribute_not_exists(pk)",
+                },
               },
-            } },
-            { Put: {
-              TableName: this.#table,
-              Item: {
-                ...reuseKey(scope, inputFingerprint, report.generation.provider, report.generation.model),
-                runId: { S: runId },
+              {
+                Update: {
+                  TableName: this.#table,
+                  Key: runKey(runId),
+                  UpdateExpression: "SET reportKey = :report",
+                  ConditionExpression:
+                    "scopeId = :scope AND inputFingerprint = :input AND snapshotKey = :snapshot AND attribute_not_exists(reportKey)",
+                  ExpressionAttributeValues: {
+                    ":report": { S: reportKey },
+                    ":scope": { S: reportId },
+                    ":input": { S: inputFingerprint },
+                    ":snapshot": { S: draft.snapshotKey },
+                  },
+                },
               },
-            } },
-          ],
-        }));
+              {
+                Put: {
+                  TableName: this.#table,
+                  Item: {
+                    ...reuseKey(
+                      scope,
+                      inputFingerprint,
+                      report.generation.provider,
+                      report.generation.model,
+                    ),
+                    runId: { S: runId },
+                  },
+                },
+              },
+            ],
+          }),
+        );
         return report;
       } catch (error) {
         const winner = await this.getReport(runId, scope);
         if (winner) return winner;
-        if (!(error instanceof Error) || error.name !== "TransactionCanceledException" || attempt === 4) throw error;
+        if (
+          !(error instanceof Error) ||
+          error.name !== "TransactionCanceledException" ||
+          attempt === 4
+        )
+          throw error;
         const current = await this.#run(runId, scope);
-        if (current?.inputFingerprint.S !== inputFingerprint || current?.snapshotKey.S !== draft.snapshotKey) throw error;
+        if (
+          current?.inputFingerprint.S !== inputFingerprint ||
+          current?.snapshotKey.S !== draft.snapshotKey
+        )
+          throw error;
       }
     }
     throw new Error("Report revision allocation exhausted");

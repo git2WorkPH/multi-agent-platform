@@ -2,12 +2,23 @@ import { describe, expect, it } from "vitest";
 import { parseAgentResultEvent } from "../../packages/contracts/src/index.ts";
 
 const v1 = {
-  schemaVersion: 1, eventId: "00000000-0000-4000-8000-000000000001",
-  eventType: "agent.result", agentId: "research", agentVersion: "1.0.0",
-  projectId: "demo", correlationId: "sample-1", topic: "market", resultId: "research-1",
-  revision: 1, occurredAt: "2026-11-07T00:00:00Z", status: "completed",
-  summary: "A fixture result", contentType: "application/json",
-  data: { findings: ["fixture"] }, sources: [{ title: "Fixture" }], metadata: {},
+  schemaVersion: 1,
+  eventId: "00000000-0000-4000-8000-000000000001",
+  eventType: "agent.result",
+  agentId: "research",
+  agentVersion: "1.0.0",
+  projectId: "demo",
+  correlationId: "sample-1",
+  topic: "market",
+  resultId: "research-1",
+  revision: 1,
+  occurredAt: "2026-11-07T00:00:00Z",
+  status: "completed",
+  summary: "A fixture result",
+  contentType: "application/json",
+  data: { findings: ["fixture"] },
+  sources: [{ title: "Fixture" }],
+  metadata: {},
 };
 
 describe("agent result v1 wire compatibility", () => {
@@ -16,10 +27,15 @@ describe("agent result v1 wire compatibility", () => {
     expect(parseAgentResultEvent({ ...v1, optionalFutureField: true })).toEqual(v1);
   });
 
-  it.each(["completed", "partial", "failed"])("supports %s artifact results", status => {
-    expect(parseAgentResultEvent({
-      ...v1, data: undefined, artifactKey: "demo/example.json", status,
-    })).toMatchObject({ status, artifactKey: "demo/example.json" });
+  it.each(["completed", "partial", "failed"])("supports %s artifact results", (status) => {
+    expect(
+      parseAgentResultEvent({
+        ...v1,
+        data: undefined,
+        artifactKey: "demo/example.json",
+        status,
+      }),
+    ).toMatchObject({ status, artifactKey: "demo/example.json" });
   });
 
   it("requires exactly one payload", () => {

@@ -1,7 +1,10 @@
 import type { ModelProvider } from "../../packages/ai/provider.ts";
 import { consolidate } from "../../packages/ai/consolidation/index.ts";
 import { ModelProviderError } from "../../packages/ai/provider.ts";
-import type { ConsolidationRepository, ConsolidationResultReader } from "../../packages/core/consolidation.ts";
+import type {
+  ConsolidationRepository,
+  ConsolidationResultReader,
+} from "../../packages/core/consolidation.ts";
 import type { ConsolidationJob } from "../../packages/contracts/src/jobs.ts";
 import type { AwsConsolidationJobs, Lease } from "../../packages/aws-adapters/jobs.ts";
 
@@ -30,12 +33,18 @@ export async function workOnce(deps: {
         await jobs.finish(lease, now(), { status: "failed", error: "retry_exhausted" });
         return true;
       }
-      report ??= await consolidate({ results, reports, provider, now: () => new Date(now()) },
-        job.id, job.scope, { ...deps.options, reuse: job.trigger === "manual" && !job.force });
+      report ??= await consolidate(
+        { results, reports, provider, now: () => new Date(now()) },
+        job.id,
+        job.scope,
+        { ...deps.options, reuse: job.trigger === "manual" && !job.force },
+      );
     } catch (error) {
       deps.onError?.(job, error);
-      const retry = job.attempts < maxAttempts && (!(error instanceof ModelProviderError) ||
-        ["rate_limit", "unavailable", "timeout"].includes(error.code));
+      const retry =
+        job.attempts < maxAttempts &&
+        (!(error instanceof ModelProviderError) ||
+          ["rate_limit", "unavailable", "timeout"].includes(error.code));
       await jobs.finish(lease, now(), {
         status: retry ? "retry" : "failed",
         error: error instanceof ModelProviderError ? error.code : "consolidation_failed",
@@ -43,7 +52,11 @@ export async function workOnce(deps: {
       });
       return true;
     }
-    await jobs.finish(lease, now(), { status: "completed", reportRunId: report.runId, error: undefined });
+    await jobs.finish(lease, now(), {
+      status: "completed",
+      reportRunId: report.runId,
+      error: undefined,
+    });
     return true;
   }
   return false;

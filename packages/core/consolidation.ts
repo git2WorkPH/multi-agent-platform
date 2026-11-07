@@ -1,5 +1,9 @@
 import type { AgentResultEvent } from "../contracts/src/index.ts";
-import type { ConsolidationInput, ConsolidationReport, ConsolidationScope } from "../contracts/src/consolidation.ts";
+import type {
+  ConsolidationInput,
+  ConsolidationReport,
+  ConsolidationScope,
+} from "../contracts/src/consolidation.ts";
 
 export interface ConsolidationResultReader {
   projectResults(projectId: string): AsyncIterable<unknown>;
@@ -19,6 +23,10 @@ export interface ConsolidationRepository {
   capture(runId: string, input: ConsolidationInput): Promise<CapturedInput>;
   getReport(runId: string, scope: ConsolidationScope): Promise<ConsolidationReport | undefined>;
   append(draft: ReportDraft): Promise<ConsolidationReport>;
-  findReusable?(scope: ConsolidationScope, fingerprint: string, provider: string, model: string):
-    Promise<ConsolidationReport | undefined>;
+  findReusable?(
+    scope: ConsolidationScope,
+    fingerprint: string,
+    provider: string,
+    model: string,
+  ): Promise<ConsolidationReport | undefined>;
 }

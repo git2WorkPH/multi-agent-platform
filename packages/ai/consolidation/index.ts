@@ -1,9 +1,16 @@
 import { parseAgentResultEvent } from "../../contracts/src/index.ts";
 import { modelGenerationResult } from "../../contracts/src/model.ts";
 import type { AgentResultEvent } from "../../contracts/src/index.ts";
-import { consolidationInput, consolidationReport, consolidationScope } from "../../contracts/src/consolidation.ts";
+import {
+  consolidationInput,
+  consolidationReport,
+  consolidationScope,
+} from "../../contracts/src/consolidation.ts";
 import type { ConsolidationInput, ConsolidationScope } from "../../contracts/src/consolidation.ts";
-import type { ConsolidationRepository, ConsolidationResultReader } from "../../core/consolidation.ts";
+import type {
+  ConsolidationRepository,
+  ConsolidationResultReader,
+} from "../../core/consolidation.ts";
 import { canonicalJson, digest } from "../../core/results.ts";
 import { validateGeneration } from "../provider.ts";
 import type { ModelProvider } from "../provider.ts";
@@ -34,31 +41,45 @@ async function select(results: ConsolidationResultReader, scope: ConsolidationSc
     }
   }
   return [...latest.values()]
-    .filter(event => (scope.topic === undefined || scope.topic === event.topic)
-      && (scope.correlationId === undefined || scope.correlationId === event.correlationId))
-    .sort((a, b) => a.eventId < b.eventId ? -1 : a.eventId > b.eventId ? 1 : 0);
+    .filter(
+      (event) =>
+        (scope.topic === undefined || scope.topic === event.topic) &&
+        (scope.correlationId === undefined || scope.correlationId === event.correlationId),
+    )
+    .sort((a, b) => (a.eventId < b.eventId ? -1 : a.eventId > b.eventId ? 1 : 0));
 }
 
 async function prepare(
-  results: ConsolidationResultReader, scope: ConsolidationScope, options: Options, now: Date,
+  results: ConsolidationResultReader,
+  scope: ConsolidationScope,
+  options: Options,
+  now: Date,
 ): Promise<ConsolidationInput> {
-  if (options.staleAfterMs !== undefined && (!Number.isFinite(options.staleAfterMs) || options.staleAfterMs < 0)) {
+  if (
+    options.staleAfterMs !== undefined &&
+    (!Number.isFinite(options.staleAfterMs) || options.staleAfterMs < 0)
+  ) {
     throw new Error("staleAfterMs must be a finite nonnegative duration");
   }
   const selected = await select(results, scope);
   if (!selected.length) throw new Error("No persisted results match the consolidation scope");
-  if (selected.length > 64) throw new Error("Consolidation source count exceeds the generation budget");
+  if (selected.length > 64)
+    throw new Error("Consolidation source count exceeds the generation budget");
   const sources: ConsolidationInput["request"]["sources"] = [];
   const evidence: ConsolidationInput["evidence"] = [];
   const issues: ConsolidationInput["issues"] = [];
-  const publishers = new Set(selected.map(event => event.agentId));
+  const publishers = new Set(selected.map((event) => event.agentId));
   for (const agentId of [...new Set(options.expectedAgentIds)].sort()) {
     if (!publishers.has(agentId)) issues.push({ kind: "missing_publisher", agentId });
   }
   for (const event of selected) {
-    const { agentId, eventId, status, occurredAt, summary, contentType, resultId, revision } = event;
+    const { agentId, eventId, status, occurredAt, summary, contentType, resultId, revision } =
+      event;
     if (status !== "completed") issues.push({ kind: status, eventId, agentId });
-    if (options.staleAfterMs !== undefined && now.getTime() - Date.parse(occurredAt) > options.staleAfterMs) {
+    if (
+      options.staleAfterMs !== undefined &&
+      now.getTime() - Date.parse(occurredAt) > options.staleAfterMs
+    ) {
       issues.push({ kind: "stale", eventId, agentId });
     }
     let content: string;
@@ -76,38 +97,71 @@ async function prepare(
     }
     sources.push({ eventId, agentId, status, summary, content });
     evidence.push({
-      eventId, eventDigest: digest(canonicalJson(event)), artifactDigest, occurredAt,
-      contentType, resultId, revision, sources: event.sources,
+      eventId,
+      eventDigest: digest(canonicalJson(event)),
+      artifactDigest,
+      occurredAt,
+      contentType,
+      resultId,
+      revision,
+      sources: event.sources,
     });
   }
   return consolidationInput.parse({
-    selectionVersion: 1, scope, request: { schemaVersion: 1, projectId: scope.projectId, topic: scope.topic, sources },
-    evidence, issues,
+    selectionVersion: 1,
+    scope,
+    request: { schemaVersion: 1, projectId: scope.projectId, topic: scope.topic, sources },
+    evidence,
+    issues,
   });
 }
 
 export async function consolidate(
-  dependencies: Dependencies, runId: string, rawScope: ConsolidationScope, options: Options = {},
+  dependencies: Dependencies,
+  runId: string,
+  rawScope: ConsolidationScope,
+  options: Options = {},
 ) {
   const { results, reports, provider, now = () => new Date() } = dependencies;
   const scope = consolidationScope.parse(rawScope);
   consolidationReport.shape.runId.parse(runId);
   const existing = await reports.getReport(runId, scope);
   if (existing) return existing;
-  const captured = await reports.getCapture(runId, scope)
-    ?? await reports.capture(runId, await prepare(results, scope, options, now()));
+  const captured =
+    (await reports.getCapture(runId, scope)) ??
+    (await reports.capture(runId, await prepare(results, scope, options, now())));
   const { input, inputFingerprint, snapshotKey } = captured;
   if (options.reuse && provider.model) {
-    const reusable = await reports.findReusable?.(scope, inputFingerprint, provider.name, provider.model);
+    const reusable = await reports.findReusable?.(
+      scope,
+      inputFingerprint,
+      provider.name,
+      provider.model,
+    );
     if (reusable) return reusable;
   }
-  const generated = modelGenerationResult.parse(await provider.generate(structuredClone(input.request)));
-  if (generated.provider !== provider.name) throw new Error("Report provenance does not match provider");
-  const generation = validateGeneration(input.request, JSON.stringify(generated.report), generated.provider, generated.model);
+  const generated = modelGenerationResult.parse(
+    await provider.generate(structuredClone(input.request)),
+  );
+  if (generated.provider !== provider.name)
+    throw new Error("Report provenance does not match provider");
+  const generation = validateGeneration(
+    input.request,
+    JSON.stringify(generated.report),
+    generated.provider,
+    generated.model,
+  );
   return reports.append({
-    schemaVersion: 1, reportId: digest(canonicalJson(scope)), runId, scope,
-    generatedAt: now().toISOString(), inputFingerprint, snapshotKey,
-    sourceEventIds: input.evidence.map(source => source.eventId), issues: input.issues,
-    status: "completed", generation,
+    schemaVersion: 1,
+    reportId: digest(canonicalJson(scope)),
+    runId,
+    scope,
+    generatedAt: now().toISOString(),
+    inputFingerprint,
+    snapshotKey,
+    sourceEventIds: input.evidence.map((source) => source.eventId),
+    issues: input.issues,
+    status: "completed",
+    generation,
   });
 }

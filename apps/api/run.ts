@@ -11,7 +11,8 @@ import { buildApi } from "./server.ts";
 const aws = localAws();
 const auth = apiAuth();
 const host = process.env.API_HOST ?? "127.0.0.1";
-if (auth.localOnly && !["127.0.0.1", "::1"].includes(host)) throw new Error("Development API must bind to loopback");
+if (auth.localOnly && !["127.0.0.1", "::1"].includes(host))
+  throw new Error("Development API must bind to loopback");
 const table = `${aws.prefix}-consolidations`;
 const resultsTable = `${aws.prefix}-results`;
 const bucket = `${aws.prefix}-artifacts`;

@@ -2,7 +2,7 @@
 
 Two independent agents publish evidence to a local AWS-compatible stack. A background worker consolidates stored results into versioned reports with a deterministic Mock or local Ollama provider.
 
-Use the Node version in `.node-version`, pnpm 11.25.0, and Docker Compose.
+Use the Node version in `.node-version`, pnpm 12.18.0, and Docker Compose.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -14,6 +14,14 @@ LOCAL_RESOURCE_PREFIX=phase1-probe-$(date +%s) pnpm test:floci
 ```
 
 The bootstrap prints the names and URLs it provisioned. It is safe to rerun with the same configuration. For overrides, export the desired variables from `.env.example` or invoke Node with `--env-file`. If changing `FLOCI_PORT`, set `LOCAL_AWS_ENDPOINT` to the matching host port. See [Floci operations](docs/operations/floci.md) for restart verification and [contract evolution](docs/architecture/decisions/001-local-substrate-and-contract.md) for the wire policy.
+
+## End-to-end walkthrough
+
+[Watch the 34-second captioned demo (WebM)](docs/media/end-to-end-walkthrough.webm?raw=1). It follows two independent agent publications through Floci ingestion, automatic consolidation, source tracing, and a forced second report revision. The recording uses the deterministic Mock provider.
+
+## Format the code
+
+Run `pnpm format` to apply ESLint fixes or `pnpm lint` to check formatting without editing files. CI runs the same check.
 
 ## Run the example agents
 

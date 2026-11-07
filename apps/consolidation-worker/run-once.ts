@@ -10,14 +10,26 @@ if (!projectId) throw new Error("Usage: pnpm consolidate <projectId> [topic] [co
 const aws = localAws();
 const bucket = `${aws.prefix}-artifacts`;
 const provider = createModelProvider();
-const result = await consolidate({
-  results: new AwsResultStore(aws, `${aws.prefix}-results`, bucket),
-  reports: new AwsConsolidationRepository(aws, `${aws.prefix}-consolidations`, bucket),
-  provider,
-}, process.env.CONSOLIDATION_RUN_ID ?? randomUUID(), {
-  projectId, topic: topic || undefined, correlationId: correlationId || undefined,
-}, {
-  expectedAgentIds: process.env.CONSOLIDATION_EXPECTED_AGENTS?.split(",").map(agent => agent.trim()).filter(Boolean),
-  staleAfterMs: process.env.CONSOLIDATION_STALE_MS === undefined ? undefined : Number(process.env.CONSOLIDATION_STALE_MS),
-});
+const result = await consolidate(
+  {
+    results: new AwsResultStore(aws, `${aws.prefix}-results`, bucket),
+    reports: new AwsConsolidationRepository(aws, `${aws.prefix}-consolidations`, bucket),
+    provider,
+  },
+  process.env.CONSOLIDATION_RUN_ID ?? randomUUID(),
+  {
+    projectId,
+    topic: topic || undefined,
+    correlationId: correlationId || undefined,
+  },
+  {
+    expectedAgentIds: process.env.CONSOLIDATION_EXPECTED_AGENTS?.split(",")
+      .map((agent) => agent.trim())
+      .filter(Boolean),
+    staleAfterMs:
+      process.env.CONSOLIDATION_STALE_MS === undefined
+        ? undefined
+        : Number(process.env.CONSOLIDATION_STALE_MS),
+  },
+);
 console.log(JSON.stringify(result, null, 2));

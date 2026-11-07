@@ -11,7 +11,9 @@ export function digest(value: string | Uint8Array) {
 export function canonicalJson(value: unknown): string {
   return JSON.stringify(value, (_key, entry: unknown) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
-    return Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+    return Object.fromEntries(
+      Object.entries(entry).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    );
   });
 }
 

@@ -7,7 +7,8 @@ export interface ModelProvider {
   generate(request: ModelGenerationRequest): Promise<ModelGenerationResult>;
 }
 
-type ErrorCode = "timeout" | "rate_limit" | "unavailable" | "missing_model" | "provider_error" | "invalid_output";
+type ErrorCode =
+  "timeout" | "rate_limit" | "unavailable" | "missing_model" | "provider_error" | "invalid_output";
 
 export class ModelProviderError extends Error {
   readonly code: ErrorCode;
@@ -20,20 +21,33 @@ export class ModelProviderError extends Error {
 }
 
 export function validateGeneration(
-  request: ModelGenerationRequest, raw: string, provider: "mock" | "ollama", model: string,
+  request: ModelGenerationRequest,
+  raw: string,
+  provider: "mock" | "ollama",
+  model: string,
 ): ModelGenerationResult {
   let result: ModelGenerationResult;
   try {
     if (raw.length > 256_000) throw new Error("Output exceeds generation budget");
-    result = modelGenerationResult.parse({ provider, model, simulated: provider === "mock", report: JSON.parse(raw) });
+    result = modelGenerationResult.parse({
+      provider,
+      model,
+      simulated: provider === "mock",
+      report: JSON.parse(raw),
+    });
   } catch (cause) {
-    throw new ModelProviderError("invalid_output", `${provider} returned invalid report JSON`, { cause });
+    throw new ModelProviderError("invalid_output", `${provider} returned invalid report JSON`, {
+      cause,
+    });
   }
 
-  const allowed = new Set(request.sources.map(source => source.eventId));
+  const allowed = new Set(request.sources.map((source) => source.eventId));
   for (const item of [...result.report.findings, ...result.report.conflicts]) {
-    if (item.sourceEventIds.some(id => !allowed.has(id))) {
-      throw new ModelProviderError("invalid_output", `${provider} cited an event outside the supplied sources`);
+    if (item.sourceEventIds.some((id) => !allowed.has(id))) {
+      throw new ModelProviderError(
+        "invalid_output",
+        `${provider} cited an event outside the supplied sources`,
+      );
     }
   }
   return result;

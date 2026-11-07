@@ -13,7 +13,10 @@ afterEach(async () => {
   closeServer = undefined;
 });
 
-async function serve(handler: (req: IncomingMessage, res: ServerResponse) => void, timeoutMs = 3000) {
+async function serve(
+  handler: (req: IncomingMessage, res: ServerResponse) => void,
+  timeoutMs = 3000,
+) {
   const server = createServer((req, res) => {
     res.setHeader("content-type", "application/json");
     if (req.url === "/api/tags") res.end(JSON.stringify({ models: [{ name: "fixture:latest" }] }));
@@ -23,14 +26,18 @@ async function serve(handler: (req: IncomingMessage, res: ServerResponse) => voi
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
   });
-  closeServer = () => new Promise<void>((resolve, reject) => {
-    server.close(error => error ? reject(error) : resolve());
-    server.closeAllConnections();
-  });
+  closeServer = () =>
+    new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+      server.closeAllConnections();
+    });
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("No test server address");
   return new OllamaModelProvider({
-    baseUrl: `http://127.0.0.1:${address.port}`, model: "fixture", timeoutMs, retries: 1,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    model: "fixture",
+    timeoutMs,
+    retries: 1,
   });
 }
 
@@ -50,7 +57,9 @@ it("builds deterministic simulated fixtures and records isolated inputs", async 
   expect(first.report.findings[0].sourceEventIds).toEqual([request.sources[0].eventId]);
   expect(assertInput).toHaveBeenCalledWith(request);
   expect(mock.invocations).toEqual([request, request]);
-  expect((await new MockModelProvider({ response: report }).generate(request)).report).toEqual(report);
+  expect((await new MockModelProvider({ response: report }).generate(request)).report).toEqual(
+    report,
+  );
 });
 
 it("delays mock responses using deterministic fake timers", async () => {
@@ -65,32 +74,52 @@ it("delays mock responses using deterministic fake timers", async () => {
 });
 
 it.each([
-  ["invalid_json", "invalid_output"], ["timeout", "timeout"],
-  ["provider_error", "provider_error"], ["rate_limit", "rate_limit"],
+  ["invalid_json", "invalid_output"],
+  ["timeout", "timeout"],
+  ["provider_error", "provider_error"],
+  ["rate_limit", "rate_limit"],
 ] as const)("simulates %s", async (failure, code) => {
-  await expect(new MockModelProvider({ failure }).generate(request)).rejects.toMatchObject({ code });
+  await expect(new MockModelProvider({ failure }).generate(request)).rejects.toMatchObject({
+    code,
+  });
 });
 
 const foreignReport = {
   ...report,
   findings: [{ text: "Foreign", sourceEventIds: ["00000000-0000-4000-8000-000000000002"] }],
 };
-const reply = (response: ServerResponse, value: unknown) => response.end(JSON.stringify({
-  done: true, model: "fixture:latest", message: { content: JSON.stringify(value) },
-}));
+const reply = (response: ServerResponse, value: unknown) =>
+  response.end(
+    JSON.stringify({
+      done: true,
+      model: "fixture:latest",
+      message: { content: JSON.stringify(value) },
+    }),
+  );
 
 it("sends structured chat without tools and retries a transient rate limit", async () => {
   let calls = 0;
   let body = "";
   const provider = await serve((req, res) => {
     calls++;
-    if (calls === 1) { res.writeHead(429); res.end(); return; }
+    if (calls === 1) {
+      res.writeHead(429);
+      res.end();
+      return;
+    }
     req.setEncoding("utf8");
-    req.on("data", chunk => { body += chunk; });
-    req.on("end", () => { reply(res, report); });
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      reply(res, report);
+    });
   });
   await expect(provider.generate(request)).resolves.toEqual({
-    provider: "ollama", model: "fixture:latest", simulated: false, report,
+    provider: "ollama",
+    model: "fixture:latest",
+    simulated: false,
+    report,
   });
   expect(calls).toBe(2);
   const payload = JSON.parse(body);
@@ -108,14 +137,20 @@ it("enforces the same reference membership rule on both providers", async () => 
 
 it("rejects invalid reports without retrying", async () => {
   let calls = 0;
-  const provider = await serve((_req, res) => { calls++; reply(res, { bogus: true }); });
+  const provider = await serve((_req, res) => {
+    calls++;
+    reply(res, { bogus: true });
+  });
   await expect(provider.generate(request)).rejects.toMatchObject({ code: "invalid_output" });
   expect(calls).toBe(1);
 });
 
 it("rejects oversized input before contacting the model", async () => {
   let calls = 0;
-  const provider = await serve((_req, res) => { calls++; reply(res, report); });
+  const provider = await serve((_req, res) => {
+    calls++;
+    reply(res, report);
+  });
   const large = { ...request, sources: [{ ...request.sources[0], content: "界".repeat(4000) }] };
   await expect(provider.generate(large)).rejects.toThrow(/generation budget/);
   expect(calls).toBe(0);
@@ -145,18 +180,21 @@ it("reports a missing model before sending chat", async () => {
   const provider = await serve((_req, res) => res.end());
   // Test the missing case through a separate endpoint path.
   const server = createServer((_req, res) => res.end('{"models":[]}'));
-  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("No test server address");
     const missing = createModelProvider({
-      AI_PROVIDER: "ollama", OLLAMA_BASE_URL: `http://127.0.0.1:${address.port}`, OLLAMA_MODEL: "missing",
+      AI_PROVIDER: "ollama",
+      OLLAMA_BASE_URL: `http://127.0.0.1:${address.port}`,
+      OLLAMA_MODEL: "missing",
     });
     await expect(missing.generate(request)).rejects.toMatchObject({
-      code: "missing_model", message: expect.stringContaining("ollama pull missing"),
+      code: "missing_model",
+      message: expect.stringContaining("ollama pull missing"),
     });
     await expect(provider.checkAvailability()).resolves.toBeUndefined();
   } finally {
-    await new Promise<void>(resolve => server.close(() => resolve()));
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });

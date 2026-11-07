@@ -16,16 +16,29 @@ const object = { Bucket: resources.bucket, Key: `restart-probe/${token}` };
 if (mode === "write") {
   await aws.dynamo.send(new PutItemCommand({ TableName: resources.results, Item: key }));
   await aws.s3.send(new PutObjectCommand({ ...object, Body: token }));
-  await aws.sqs.send(new SendMessageCommand({ QueueUrl: resources.consolidation, MessageBody: token }));
+  await aws.sqs.send(
+    new SendMessageCommand({ QueueUrl: resources.consolidation, MessageBody: token }),
+  );
 } else {
-  const result = await aws.dynamo.send(new GetItemCommand({
-    TableName: resources.results, Key: key, ConsistentRead: true,
-  }));
+  const result = await aws.dynamo.send(
+    new GetItemCommand({
+      TableName: resources.results,
+      Key: key,
+      ConsistentRead: true,
+    }),
+  );
   assert.deepEqual(result.Item, key);
-  assert.equal(await (await aws.s3.send(new GetObjectCommand(object))).Body?.transformToString(), token);
-  const { Messages } = await aws.sqs.send(new ReceiveMessageCommand({
-    QueueUrl: resources.consolidation, WaitTimeSeconds: 2, VisibilityTimeout: 0,
-  }));
+  assert.equal(
+    await (await aws.s3.send(new GetObjectCommand(object))).Body?.transformToString(),
+    token,
+  );
+  const { Messages } = await aws.sqs.send(
+    new ReceiveMessageCommand({
+      QueueUrl: resources.consolidation,
+      WaitTimeSeconds: 2,
+      VisibilityTimeout: 0,
+    }),
+  );
   assert.equal(Messages?.[0]?.Body, token);
 }
 console.log(`Restart probe ${mode} passed`);

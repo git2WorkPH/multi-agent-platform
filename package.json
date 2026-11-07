@@ -2,7 +2,7 @@
   "name": "multi-agent-platform",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": "24.x"
   },
@@ -21,7 +21,9 @@
     "dashboard": "pnpm --filter @multi-agent-platform/dashboard dev",
     "build:dashboard": "pnpm --filter @multi-agent-platform/dashboard build",
     "test:e2e": "playwright test",
-    "test:ollama-stack": "vitest run tests/ollama-stack"
+    "test:ollama-stack": "vitest run tests/ollama-stack",
+    "lint": "eslint . --max-warnings 0",
+    "format": "eslint . --fix"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",
@@ -33,8 +35,13 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@babel/core": "^8.1.0",
+    "@babel/eslint-parser": "^8.0.7",
     "@playwright/test": "^1.65.0",
     "@types/node": "^24.19.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-prettier": "^5.5.7",
+    "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }

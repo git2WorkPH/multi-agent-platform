@@ -2,7 +2,7 @@
 
 ## Start with deterministic inference
 
-Install the Node version in `.node-version`, pnpm 11.25.0, and Docker Compose. From the repository root:
+Install the Node version in `.node-version`, pnpm 12.18.0, and Docker Compose. From the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
