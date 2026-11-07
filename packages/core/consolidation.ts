@@ -19,4 +19,6 @@ export interface ConsolidationRepository {
   capture(runId: string, input: ConsolidationInput): Promise<CapturedInput>;
   getReport(runId: string, scope: ConsolidationScope): Promise<ConsolidationReport | undefined>;
   append(draft: ReportDraft): Promise<ConsolidationReport>;
+  findReusable?(scope: ConsolidationScope, fingerprint: string, provider: string, model: string):
+    Promise<ConsolidationReport | undefined>;
 }

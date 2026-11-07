@@ -63,6 +63,11 @@ export class OllamaModelProvider implements ModelProvider {
     this.#config = ollamaConfig.parse(config);
   }
 
+  get model() {
+    const { model } = this.#config;
+    return model.slice(model.lastIndexOf("/") + 1).includes(":") ? model : `${model}:latest`;
+  }
+
   async #request(path: string, body?: unknown): Promise<unknown> {
     const { baseUrl, timeoutMs, retries, model } = this.#config;
     const endpoint = baseUrl.replace(/\/+$/, "") + path;
@@ -103,8 +108,7 @@ export class OllamaModelProvider implements ModelProvider {
     const result = installedModels.safeParse(await this.#request("/api/tags"));
     if (!result.success) throw new ModelProviderError("invalid_output", "Ollama returned an invalid model list");
     const { model } = this.#config;
-    const tag = model.slice(model.lastIndexOf("/") + 1).includes(":") ? model : `${model}:latest`;
-    if (!result.data.models.some(entry => entry.name === model || entry.name === tag)) {
+    if (!result.data.models.some(entry => entry.name === model || entry.name === this.model)) {
       throw new ModelProviderError("missing_model", `Model ${model} is unavailable. Pull it with ollama pull ${model}.`);
     }
   }

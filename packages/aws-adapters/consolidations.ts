@@ -1,26 +1,33 @@
 import { GetItemCommand, PutItemCommand, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
-import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import type { DynamoDBClient, TransactWriteItem } from "@aws-sdk/client-dynamodb";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { consolidationInput, consolidationReport } from "../contracts/src/consolidation.ts";
 import type { ConsolidationInput, ConsolidationScope } from "../contracts/src/consolidation.ts";
 import type { ConsolidationRepository, ReportDraft } from "../core/consolidation.ts";
 import { artifactLimit, canonicalJson, digest } from "../core/results.ts";
+import { signalChange } from "./jobs.ts";
 
 const runKey = (id: string) => ({ pk: { S: `run#${id}` }, sk: { S: "capture" } });
 const scopeId = (scope: ConsolidationScope) => digest(canonicalJson(scope));
+const reuseKey = (scope: ConsolidationScope, fingerprint: string, provider: string, model: string) => ({
+  pk: { S: `report#${scopeId(scope)}` },
+  sk: { S: `reuse#${digest(canonicalJson([1, fingerprint, provider, model]))}` },
+});
 
 export class AwsConsolidationRepository implements ConsolidationRepository {
   readonly #dynamo: DynamoDBClient;
   readonly #s3: S3Client;
   readonly #table: string;
   readonly #bucket: string;
+  readonly #fence?: () => TransactWriteItem;
 
-  constructor(aws: { dynamo: DynamoDBClient; s3: S3Client }, table: string, bucket: string) {
+  constructor(aws: { dynamo: DynamoDBClient; s3: S3Client }, table: string, bucket: string, fence?: () => TransactWriteItem) {
     this.#dynamo = aws.dynamo;
     this.#s3 = aws.s3;
     this.#table = table;
     this.#bucket = bucket;
+    this.#fence = fence;
   }
 
   async #run(runId: string, scope: ConsolidationScope) {
@@ -75,7 +82,7 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
       await this.#dynamo.send(new PutItemCommand({
         TableName: this.#table,
         Item: {
-          ...runKey(runId), scopeId: { S: scopeId(input.scope) },
+          ...runKey(runId), scopeId: { S: scopeId(input.scope) }, scope: { S: canonicalJson(input.scope) },
           snapshotKey: { S: snapshotKey }, inputFingerprint: { S: inputFingerprint },
         },
         ConditionExpression: "attribute_not_exists(pk)",
@@ -100,6 +107,25 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
     return report;
   }
 
+  async getReportScope(runId: string) {
+    const { Item } = await this.#dynamo.send(new GetItemCommand({
+      TableName: this.#table, Key: runKey(runId), ConsistentRead: true,
+    }));
+    const key = Item?.reportKey?.S;
+    if (!key) return undefined;
+    if (Item.scope?.S) return consolidationInput.shape.scope.parse(JSON.parse(Item.scope.S));
+    const report = consolidationReport.parse(await this.#read(key));
+    if (report.runId !== runId || report.reportId !== Item.scopeId.S) throw new Error("Invalid report run");
+    return report.scope;
+  }
+
+  async findReusable(scope: ConsolidationScope, fingerprint: string, provider: string, model: string) {
+    const { Item } = await this.#dynamo.send(new GetItemCommand({
+      TableName: this.#table, Key: reuseKey(scope, fingerprint, provider, model), ConsistentRead: true,
+    }));
+    return Item?.runId.S ? this.getReport(Item.runId.S, scope) : undefined;
+  }
+
   async append(draft: ReportDraft) {
     const { runId, scope, reportId, inputFingerprint } = draft;
     if (reportId !== scopeId(scope)) throw new Error("Report ID does not match scope");
@@ -117,6 +143,8 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
       try {
         await this.#dynamo.send(new TransactWriteItemsCommand({
           TransactItems: [
+            ...(this.#fence ? [this.#fence()] : []),
+            signalChange(this.#table, scope.projectId),
             { Put: {
               TableName: this.#table, Item: { ...headKey, revision: { N: String(revision) } },
               ConditionExpression: head ? "revision = :previous" : "attribute_not_exists(pk)",
@@ -143,6 +171,13 @@ export class AwsConsolidationRepository implements ConsolidationRepository {
               ExpressionAttributeValues: {
                 ":report": { S: reportKey }, ":scope": { S: reportId }, ":input": { S: inputFingerprint },
                 ":snapshot": { S: draft.snapshotKey },
+              },
+            } },
+            { Put: {
+              TableName: this.#table,
+              Item: {
+                ...reuseKey(scope, inputFingerprint, report.generation.provider, report.generation.model),
+                runId: { S: runId },
               },
             } },
           ],

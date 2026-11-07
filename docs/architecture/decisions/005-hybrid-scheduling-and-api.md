@@ -1,0 +1,9 @@
+# 005 Hybrid scheduling and API
+
+Each accepted result transaction advances the dirty generation for its project and topic, sets a debounce deadline, and increments a project change counter. An eligible generation becomes a queued automatic job in a conditional transaction. A newer event either extends the pending deadline or starts a new dirty generation. SQS carries wake-ups. The worker also polls DynamoDB, so wake-up loss does not lose work.
+
+A conditional project lease serializes overlapping scopes. The lease token and expiry are checked in the report publication transaction. Completion checks the token again before releasing the lease. If the report commits and the worker exits before acknowledging the job, a new attempt reads the existing report and completes the job without generating again. The worker uses bounded retries with exponential backoff. The fixed lease duration must accommodate provider timeouts and retries.
+
+Manual requests return a job URL. An idempotency key is scoped to the project and bound to the request scope and force flag. Unforced requests may reuse a completed report for the same input fingerprint, provider, and model tag. Forced requests allocate a new revision. Model tags are names and may be updated independently. Force a new revision when re-pulling a model under the same tag. Reports created before this phase remain readable and have no reuse index until a new matching revision is generated.
+
+The API validates with Zod, produces OpenAPI, and uses project grants for all project data. SSE emits project-scoped invalidations from the durable change counter. Clients read details through the same endpoints and can poll after a disconnect. The local-first MVP uses paginated scheduler scans and per-stream polling of the change counter. These choices trade read efficiency for a small infrastructure surface.

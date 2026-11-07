@@ -15,12 +15,18 @@
     "agent:analysis": "node agents/analysis-agent/run.ts",
     "consume:results": "node apps/result-consumer/run.ts",
     "test:ollama": "vitest run tests/ollama",
-    "consolidate": "node apps/consolidation-worker/run-once.ts"
+    "consolidate": "node apps/consolidation-worker/run-once.ts",
+    "api": "node apps/api/run.ts",
+    "work:consolidation": "node apps/consolidation-worker/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",
     "@aws-sdk/client-s3": "^3.1163.0",
-    "@aws-sdk/client-sqs": "^3.1163.0"
+    "@aws-sdk/client-sqs": "^3.1163.0",
+    "@fastify/swagger": "^9.9.3",
+    "fastify": "^5.12.8",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

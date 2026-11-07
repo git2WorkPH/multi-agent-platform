@@ -6,21 +6,25 @@ import { artifactLimit, artifactNamespace, canonicalJson, digest, inlineLimit } 
 import type { ConsolidationResultReader } from "../core/consolidation.ts";
 import type { ResultStore } from "../core/results.ts";
 import type { localAws } from "../../infrastructure/bootstrap/resources.ts";
+import { markDirty, signalChange } from "./jobs.ts";
 
 export class AwsResultStore implements ResultStore, ConsolidationResultReader {
   constructor(
     privateConfig: Pick<ReturnType<typeof localAws>, "dynamo" | "s3">,
     table: string,
     bucket: string,
+    scheduling?: { table: string; debounceMs: number; now?: () => number },
   ) {
     this.aws = privateConfig;
     this.table = table;
     this.bucket = bucket;
+    this.scheduling = scheduling;
   }
 
   private readonly aws;
   private readonly table;
   private readonly bucket;
+  private readonly scheduling;
 
   async *projectResults(projectId: string): AsyncGenerator<unknown> {
     let cursor: Record<string, AttributeValue> | undefined;
@@ -101,6 +105,10 @@ export class AwsResultStore implements ResultStore, ConsolidationResultReader {
           { Put: { TableName: this.table, Item: {
             pk: { S: projectKey }, sk: { S: `revision#${revisionKey}` }, eventId: { S: event.eventId },
           }, ConditionExpression: "attribute_not_exists(pk)" } },
+          ...(this.scheduling ? [markDirty(this.scheduling.table, {
+            projectId: event.projectId, topic: event.topic,
+          }, (this.scheduling.now ?? Date.now)() + this.scheduling.debounceMs),
+          signalChange(this.scheduling.table, event.projectId)] : []),
         ],
       }));
     } catch (error) {

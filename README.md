@@ -47,3 +47,7 @@ AI_PROVIDER=mock pnpm consolidate demo sample demo-run
 ```
 
 The topic and correlation ID are optional. Supply an empty topic argument to filter only by correlation ID. Set `CONSOLIDATION_EXPECTED_AGENTS` to a comma-separated list of expected publishers and `CONSOLIDATION_STALE_MS` to a freshness threshold. Each new run creates a report revision. To retry the same run after a failure, set `CONSOLIDATION_RUN_ID` to the same UUID on each attempt. See [consolidation design](docs/learning/consolidation-design.md).
+
+## Run the hybrid scheduler and API
+
+Run `pnpm work:consolidation` alongside the result consumer for automatic reports. Start `API_AUTH_MODE=development API_DEV_PROJECTS=demo pnpm api` for local API access and manual requests. See [API and worker operations](docs/operations/api.md) for authentication, polling, and request examples.

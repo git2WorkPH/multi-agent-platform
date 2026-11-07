@@ -13,6 +13,7 @@ type MockOptions = {
 
 export class MockModelProvider implements ModelProvider {
   readonly name = "mock";
+  readonly model = "fixture-v1";
   readonly #calls: ModelGenerationRequest[] = [];
   readonly #options: MockOptions;
 
@@ -30,7 +31,7 @@ export class MockModelProvider implements ModelProvider {
     this.#options.assertInput?.(structuredClone(request));
     if (this.#options.delayMs) await delay(this.#options.delayMs);
     const { failure, response } = this.#options;
-    if (failure === "invalid_json") return validateGeneration(request, "{", "mock", "fixture-v1");
+    if (failure === "invalid_json") return validateGeneration(request, "{", "mock", this.model);
     if (failure) throw new ModelProviderError(failure, `Simulated mock failure: ${failure}`);
     const report = response === undefined ? {
       executiveSummary: `Simulated fixture report for ${request.projectId}`,
@@ -42,6 +43,6 @@ export class MockModelProvider implements ModelProvider {
       missingInformation: [],
       recommendations: [],
     } : typeof response === "function" ? response(structuredClone(request)) : response;
-    return validateGeneration(request, JSON.stringify(report), "mock", "fixture-v1");
+    return validateGeneration(request, JSON.stringify(report), "mock", this.model);
   }
 }

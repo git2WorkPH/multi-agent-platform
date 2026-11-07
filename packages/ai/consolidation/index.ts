@@ -18,6 +18,7 @@ interface Dependencies {
 interface Options {
   expectedAgentIds?: readonly string[];
   staleAfterMs?: number;
+  reuse?: boolean;
 }
 
 async function select(results: ConsolidationResultReader, scope: ConsolidationScope) {
@@ -96,6 +97,10 @@ export async function consolidate(
   const captured = await reports.getCapture(runId, scope)
     ?? await reports.capture(runId, await prepare(results, scope, options, now()));
   const { input, inputFingerprint, snapshotKey } = captured;
+  if (options.reuse && provider.model) {
+    const reusable = await reports.findReusable?.(scope, inputFingerprint, provider.name, provider.model);
+    if (reusable) return reusable;
+  }
   const generated = modelGenerationResult.parse(await provider.generate(structuredClone(input.request)));
   if (generated.provider !== provider.name) throw new Error("Report provenance does not match provider");
   const generation = validateGeneration(input.request, JSON.stringify(generated.report), generated.provider, generated.model);

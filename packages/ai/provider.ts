@@ -3,6 +3,7 @@ import type { ModelGenerationRequest, ModelGenerationResult } from "../contracts
 
 export interface ModelProvider {
   readonly name: string;
+  readonly model?: string;
   generate(request: ModelGenerationRequest): Promise<ModelGenerationResult>;
 }
 
