@@ -1,0 +1,25 @@
+{
+  "name": "multi-agent-platform",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/unit",
+    "test:floci": "vitest run tests/integration",
+    "bootstrap": "node infrastructure/bootstrap/resources.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1163.0",
+    "@aws-sdk/client-s3": "^3.1163.0",
+    "@aws-sdk/client-sqs": "^3.1163.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
