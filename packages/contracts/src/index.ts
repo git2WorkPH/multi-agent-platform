@@ -39,3 +39,5 @@ export function parseAgentResultEvent(input: unknown): AgentResultEvent {
       throw new Error(`Unsupported agent result schema version: ${schemaVersion}`);
   }
 }
+
+export * from "./model.ts";

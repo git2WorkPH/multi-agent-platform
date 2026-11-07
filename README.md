@@ -33,3 +33,7 @@ pnpm agent:analysis
 Set `RESEARCH_FIXTURE` to a JSON array of findings or `ANALYSIS_FIXTURE` to a JSON array of numbers to use your own inputs. Both agents accept `AGENT_PROJECT_ID`, `AGENT_TOPIC`, and `AGENT_CORRELATION_ID`. Set `AGENT_RESULT_ID` and `AGENT_REVISION` to publish a new revision of an existing result. To replay the same publication across processes, also pin `AGENT_EVENT_ID` and `AGENT_OCCURRED_AT` and keep the payload and scope identical.
 
 The consumer acknowledges deliveries after storing them. Malformed and conflicting deliveries remain eligible for SQS dead-letter routing. See [the ingestion decision](docs/architecture/decisions/002-result-ingestion.md) for storage and retry behavior.
+
+## Model providers
+
+Set `AI_PROVIDER=mock` for deterministic simulated output or `AI_PROVIDER=ollama` for local inference. Run `pnpm test:ollama` with a reachable server and installed `OLLAMA_MODEL`. See [Ollama setup](docs/learning/ollama-integration.md) and [AI mocking examples](docs/learning/ai-mocking.md).
