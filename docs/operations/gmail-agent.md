@@ -3,9 +3,12 @@
 ## One-time setup
 
 1. In your Google Cloud project, enable the Gmail API and configure the OAuth consent screen. A Workspace administrator may need to allow access.
-2. Create an OAuth web client for your own use. If you use [Google's OAuth Playground](https://developers.google.com/oauthplayground/), register `https://developers.google.com/oauthplayground` as an authorized redirect URI, enable **Use your own OAuth credentials** in the Playground settings, and enter that client's credentials.
-3. In the Playground, authorize only `https://www.googleapis.com/auth/gmail.metadata` for the mailbox you want to read. Exchange the authorization code and copy the refresh token into your private `.env`. Set `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` for the same client. Consent and refresh token lifetime depend on your Google app settings.
-4. Add `email` to `API_DEV_PROJECTS` and restart the local API, or grant the `email` project in your token configuration. Keep the API and Floci local for this mailbox data.
+2. Create an OAuth client of type **Desktop app** and set its client ID as `GMAIL_CLIENT_ID` in your local `.env`. Google still requires a registered client ID.
+3. Add `email` to `API_DEV_PROJECTS` and restart the local API, or grant the `email` project in your token configuration. Keep the API and Floci local for this mailbox data.
+
+When you run `pnpm agent:gmail`, the agent opens Google's account chooser. Approve Gmail metadata access in the browser. The agent receives a code on a temporary loopback port and exchanges it with PKCE. It holds the access token in memory for the scan. If Google requires a client secret for your Desktop client, set `GMAIL_CLIENT_SECRET` from that client configuration. No manual refresh-token step is needed for interactive sign-in.
+
+Existing offline setups with a client ID, client secret, and refresh token still use the refresh-token flow. Remove `GMAIL_REFRESH_TOKEN` from your local configuration to switch to browser sign-in.
 
 ## Run a scan
 

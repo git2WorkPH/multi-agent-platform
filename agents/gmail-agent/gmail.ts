@@ -17,32 +17,38 @@ const metadata = z.object({
 const oauthToken = z.object({ access_token: z.string().min(1) });
 const messagesUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 
-export async function scanGmail(
-  options: {
-    clientId: string;
-    clientSecret: string;
-    refreshToken: string;
-    limit: number;
-    accountIndex: number;
-  },
-  request = fetch,
-) {
+export async function exchangeGmailToken(params: URLSearchParams, request = fetch) {
   const response = await request("https://oauth2.googleapis.com/token", {
     method: "POST",
-    body: new URLSearchParams({
-      client_id: options.clientId,
-      client_secret: options.clientSecret,
-      refresh_token: options.refreshToken,
-      grant_type: "refresh_token",
-    }),
+    body: params,
     redirect: "error",
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok)
     throw new Error(
-      `Gmail authorization failed (HTTP ${response.status}). Check the OAuth credentials and consent.`,
+      `Gmail authorization failed (HTTP ${response.status}). Check the OAuth client type, credentials, and consent.`,
     );
-  const { access_token } = oauthToken.parse(await response.json());
+  return oauthToken.parse(await response.json()).access_token;
+}
+
+export async function scanGmail(
+  options: { limit: number; accountIndex: number } & (
+    { accessToken: string } | { clientId: string; clientSecret: string; refreshToken: string }
+  ),
+  request = fetch,
+) {
+  const access_token =
+    "accessToken" in options
+      ? options.accessToken
+      : await exchangeGmailToken(
+          new URLSearchParams({
+            client_id: options.clientId,
+            client_secret: options.clientSecret,
+            refresh_token: options.refreshToken,
+            grant_type: "refresh_token",
+          }),
+          request,
+        );
   const get = async (url: URL) => {
     const result = await request(url, {
       headers: { Authorization: `Bearer ${access_token}` },

@@ -141,7 +141,7 @@ Run `pnpm dashboard` after starting the API, consumer, and worker. The dashboard
 
 ## Check Gmail for urgent email
 
-The optional Gmail agent checks a bounded batch of unread inbox messages for urgency cues and Gmail's Important label. It publishes the flagged messages to the separate `email` project. After [setting up Gmail access](docs/operations/gmail-agent.md), run:
+The optional Gmail agent checks a bounded batch of unread inbox messages for urgency cues and Gmail's Important label. It publishes the flagged messages to the separate `email` project. After [setting up the Google Desktop client](docs/operations/gmail-agent.md), run the command and grant Gmail access in your browser:
 
 ```sh
 pnpm agent:gmail
