@@ -42,6 +42,33 @@ Set `RESEARCH_FIXTURE` to a JSON array of findings or `ANALYSIS_FIXTURE` to a JS
 
 The consumer acknowledges deliveries after storing them. Malformed and conflicting deliveries remain eligible for SQS dead-letter routing. See [the ingestion decision](docs/architecture/decisions/002-result-ingestion.md) for storage and retry behavior.
 
+## Add an agent with a specialty
+
+Give the agent its own entry point under `agents/`, a unique publisher ID, and an independently testable function for its specialty. For example, save this as `agents/quality-agent/run.ts` to check sample records for missing IDs:
+
+```ts
+import { publishResult } from "../../packages/messaging/results.ts";
+
+const records = [{ id: "sample-1" }, { id: "" }];
+const missingIds = records.filter((record) => !record.id).length;
+
+await publishResult(
+  "quality",
+  `Found ${missingIds} records without IDs`,
+  { recordsChecked: records.length, missingIds },
+  [{ title: "Quality check sample records" }],
+);
+```
+
+With Floci bootstrapped and the consumer and worker running, invoke the new agent independently:
+
+```sh
+AGENT_PROJECT_ID=demo AGENT_TOPIC=sample AGENT_CORRELATION_ID=demo-run \
+  node agents/quality-agent/run.ts
+```
+
+Use the same project, topic, and correlation ID as other publishers when their evidence belongs together. Confirm that `quality` appears under **Publishers** and that its event is available under **Results**. The shared publisher validates and sends the [versioned event contract](packages/contracts/src/index.ts). The consolidator discovers the result from storage, so adding the agent requires no consolidator changes. If you use `CONSOLIDATION_EXPECTED_AGENTS`, add `quality` only when its absence should be reported as a gap.
+
 ## Model providers
 
 Set `AI_PROVIDER=mock` for deterministic simulated output or `AI_PROVIDER=ollama` for local inference. Run `pnpm test:ollama` with a reachable server and installed `OLLAMA_MODEL`. See [Ollama setup](docs/learning/ollama-integration.md) and [AI mocking examples](docs/learning/ai-mocking.md).
