@@ -31,7 +31,7 @@ Open four terminal tabs in the repository folder. Run **one command per tab** an
 | API | `API_AUTH_MODE=development API_DEV_PROJECTS=demo AI_PROVIDER=mock pnpm api` |
 | Dashboard | `pnpm dashboard` |
 
-Open the URL printed by the dashboard terminal, usually [http://127.0.0.1:5173](http://127.0.0.1:5173). The project should show **demo**. Leave the bearer token blank for this local setup. If port 5173 is busy, run `pnpm dashboard --port 5198` in the dashboard tab instead.
+Open the URL printed by the dashboard terminal, usually [http://127.0.0.1:5174](http://127.0.0.1:5174). The project should show **demo**. Leave the bearer token blank for this local setup. If port 5174 is busy, run `pnpm dashboard --port 5198` in the dashboard tab instead.
 
 ### 3. Publish the demo results
 
