@@ -1,3 +1,4 @@
+import { urgencyReason } from "./urgency.ts";
 import { z } from "zod";
 import { urgentEmailDigest } from "../../packages/contracts/src/urgent-email.ts";
 
@@ -98,15 +99,12 @@ export async function scanGmail(
         .slice(0, 180) || fallback;
     const subject = header("subject", "(No subject)");
     const sender = header("from", "(Unknown sender)");
-    const reason = /\b(urgent|asap|immediate(?:ly)?|final notice|past due|overdue)\b/i.test(subject)
-      ? "The subject contains an explicit urgency cue."
-      : /\b(due today|deadline today|respond by|action required|security alert|payment failed)\b/i.test(
-            subject,
-          )
-        ? "The subject signals a deadline, security issue, or action request."
-        : message.labelIds.includes("IMPORTANT")
-          ? "Gmail marked this unread message important."
-          : undefined;
+    const reason = urgencyReason(
+      subject,
+      message.labelIds.includes("IMPORTANT")
+        ? "Gmail marked this unread message important."
+        : undefined,
+    );
     if (reason)
       messages.push({
         subject,

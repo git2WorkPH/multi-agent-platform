@@ -141,13 +141,13 @@ Run `pnpm dashboard` after starting the API, consumer, and worker. The dashboard
 
 ## Check Gmail for urgent email
 
-The optional Gmail agent checks a bounded batch of unread inbox messages for urgency cues and Gmail's Important label. It publishes the flagged messages to the separate `email` project. After [setting up the Google Desktop client](docs/operations/gmail-agent.md), run the command and grant Gmail access in your browser:
+The Gmail agent can read the unread inbox from Apple Mail on your Mac. Set `APPLE_MAIL_ACCOUNT` to the synced Gmail address, add `email` to your API project grant, then run the command and allow your terminal to control Mail when prompted. See [Gmail agent setup](docs/operations/gmail-agent.md) for Apple Mail and direct Gmail API options.
 
 ```sh
 pnpm agent:gmail
 ```
 
-In the dashboard, select **email**, open **Results**, and choose the newest **gmail-urgency** result. Each flagged item shows its subject, sender, received date, urgency reason, and a link to Gmail.
+In the dashboard, select **email**, open **Results**, and choose the newest **gmail-urgency** result. Each flagged item shows its subject, sender, received date, urgency reason, and a link to the message when available.
 
 ## Review files on your Mac
 

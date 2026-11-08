@@ -768,14 +768,16 @@ function Evidence({ event }: { event: AgentResultEvent }) {
                   {message.sender} · {date(message.receivedAt)}
                 </p>
                 <p>{message.reason}</p>
-                <a
-                  className="source-button"
-                  href={message.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Open in Gmail
-                </a>
+                {message.link && (
+                  <a
+                    className="source-button"
+                    href={message.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {message.link.startsWith("message:") ? "Open in Apple Mail" : "Open in Gmail"}
+                  </a>
+                )}
               </li>
             ))}
           </ul>
