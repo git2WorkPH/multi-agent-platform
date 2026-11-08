@@ -141,8 +141,17 @@ function App() {
           </nav>
           {projects.length > 0 && agentProjects.some(({ id }) => !projects.includes(id)) && (
             <small className="agent-project-help">
-              To open a disabled view, add its <code>email</code> or <code>machine</code> project to
-              your API grant, then reload.
+              {token ? (
+                <>
+                  This token can’t open every view. Use a token that includes the <code>email</code>{" "}
+                  or <code>machine</code> project.
+                </>
+              ) : (
+                <>
+                  For local demo access, set <code>API_DEV_PROJECTS=demo,email,machine</code> in{" "}
+                  <code>.env</code>. Restart <code>pnpm api</code>, then refresh this page.
+                </>
+              )}
             </small>
           )}
         </div>
