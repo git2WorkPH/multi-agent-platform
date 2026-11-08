@@ -5,6 +5,7 @@ import { bootstrap, localAws } from "../../infrastructure/bootstrap/resources.ts
 import { consolidate } from "../../packages/ai/consolidation/index.ts";
 import { MockModelProvider } from "../../packages/ai/providers/mock/index.ts";
 import { AwsConsolidationRepository } from "../../packages/aws-adapters/consolidations.ts";
+import { AwsConsolidationJobs } from "../../packages/aws-adapters/jobs.ts";
 import { AwsResultStore } from "../../packages/aws-adapters/result-store.ts";
 import { parseAgentResultEvent } from "../../packages/contracts/src/index.ts";
 import { artifactNamespace, digest } from "../../packages/core/results.ts";
@@ -139,3 +140,45 @@ it("captures scoped evidence, recovers failed inference, and commits immutable r
   for await (const _ of results.projectResults("demo")) originalCount++;
   expect(originalCount).toBe(5);
 }, 45_000);
+
+it("keeps private results visible in storage and out of automatic and manual consolidation", async () => {
+  const aws = localAws(`private-${randomUUID().slice(0, 12)}`);
+  const resources = await bootstrap(aws);
+  const scope = { projectId: "email", topic: "urgent-inbox" };
+  const results = new AwsResultStore(aws, resources.results, resources.bucket, {
+    table: resources.consolidations,
+    debounceMs: 0,
+  });
+  const jobs = new AwsConsolidationJobs(aws.dynamo, resources.consolidations);
+  const reports = new AwsConsolidationRepository(aws, resources.consolidations, resources.bucket);
+  const event = parseAgentResultEvent({
+    ...scope,
+    schemaVersion: 1,
+    eventId: randomUUID(),
+    eventType: "agent.result",
+    agentId: "gmail-urgency",
+    agentVersion: "1",
+    correlationId: "gmail",
+    resultId: "private",
+    revision: 1,
+    occurredAt: new Date().toISOString(),
+    status: "completed",
+    summary: "Private digest",
+    contentType: "application/json",
+    data: { messages: [] },
+    sources: [],
+    metadata: { includeInConsolidation: false },
+  });
+  expect(await results.save(event)).toBe("stored");
+  expect(await jobs.version("email")).toBe("1");
+  await jobs.schedule(Date.now());
+  for await (const job of jobs.due(Date.now()))
+    throw new Error(`Unexpected automatic job ${job.id}`);
+  const provider = new MockModelProvider();
+  await expect(consolidate({ results, reports, provider }, randomUUID(), scope)).rejects.toThrow(
+    /No persisted results/,
+  );
+  expect(provider.invocations).toHaveLength(0);
+  for await (const result of results.projectResults("email"))
+    expect(result).toMatchObject({ eventId: event.eventId });
+});

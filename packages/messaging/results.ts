@@ -18,6 +18,12 @@ export async function publishResult(
   summary: string,
   data: NonNullable<AgentResultEvent["data"]>,
   sources: AgentResultEvent["sources"],
+  options?: {
+    projectId: string;
+    topic: string;
+    correlationId: string;
+    includeInConsolidation: false;
+  },
 ) {
   const aws = localAws();
   const QueueUrl = await ingestionQueue(aws);
@@ -29,7 +35,7 @@ export async function publishResult(
       await aws.sqs.send(new SendMessageCommand({ QueueUrl, MessageBody }));
     },
   };
-  const eventId = process.env.AGENT_EVENT_ID ?? randomUUID();
+  const eventId = (options ? undefined : process.env.AGENT_EVENT_ID) ?? randomUUID();
   await publisher.publish(
     parseAgentResultEvent({
       schemaVersion: 1,
@@ -37,18 +43,18 @@ export async function publishResult(
       eventType: "agent.result",
       agentId,
       agentVersion: "1.0.0",
-      projectId: process.env.AGENT_PROJECT_ID ?? "demo",
-      correlationId: process.env.AGENT_CORRELATION_ID ?? "demo-run",
-      topic: process.env.AGENT_TOPIC ?? "sample",
-      resultId: process.env.AGENT_RESULT_ID ?? eventId,
-      revision: Number(process.env.AGENT_REVISION ?? "1"),
-      occurredAt: process.env.AGENT_OCCURRED_AT ?? new Date().toISOString(),
+      projectId: options?.projectId ?? process.env.AGENT_PROJECT_ID ?? "demo",
+      correlationId: options?.correlationId ?? process.env.AGENT_CORRELATION_ID ?? "demo-run",
+      topic: options?.topic ?? process.env.AGENT_TOPIC ?? "sample",
+      resultId: options ? eventId : (process.env.AGENT_RESULT_ID ?? eventId),
+      revision: options ? 1 : Number(process.env.AGENT_REVISION ?? "1"),
+      occurredAt: (options ? undefined : process.env.AGENT_OCCURRED_AT) ?? new Date().toISOString(),
       status: "completed",
       summary,
       contentType: "application/json",
       data,
       sources,
-      metadata: {},
+      metadata: options ? { includeInConsolidation: options.includeInConsolidation } : {},
     }),
   );
   console.log(JSON.stringify({ agentId, eventId }));

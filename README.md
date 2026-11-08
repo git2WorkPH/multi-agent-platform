@@ -138,3 +138,13 @@ Run `pnpm dashboard` after starting the API, consumer, and worker. The dashboard
 - [Acceptance criteria and verification commands](docs/testing/verification.md)
 - [Event-driven architecture](docs/learning/event-driven-architecture.md)
 - [AWS with Floci](docs/learning/aws-with-floci.md)
+
+## Check Gmail for urgent email
+
+The optional Gmail agent checks a bounded batch of unread inbox messages for urgency cues and Gmail's Important label. It publishes the flagged messages to the separate `email` project. After [setting up Gmail access](docs/operations/gmail-agent.md), run:
+
+```sh
+pnpm agent:gmail
+```
+
+In the dashboard, select **email**, open **Results**, and choose the newest **gmail-urgency** result. Each flagged item shows its subject, sender, received date, urgency reason, and a link to Gmail.

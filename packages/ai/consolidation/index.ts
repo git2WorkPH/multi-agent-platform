@@ -43,6 +43,7 @@ async function select(results: ConsolidationResultReader, scope: ConsolidationSc
   return [...latest.values()]
     .filter(
       (event) =>
+        event.metadata.includeInConsolidation !== false &&
         (scope.topic === undefined || scope.topic === event.topic) &&
         (scope.correlationId === undefined || scope.correlationId === event.correlationId),
     )

@@ -5,6 +5,7 @@ import { createApi } from "./api.ts";
 import type { AgentResultEvent, ConsolidationReport, DashboardApi, ReportSummary } from "./api.ts";
 import { errorMessage, useLive, usePages, useRequest } from "./state.ts";
 import "./styles.css";
+import { urgentEmailDigest } from "../../../packages/contracts/src/urgent-email.ts";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 const date = (value: string | number) => dateFormat.format(new Date(value));
@@ -721,6 +722,8 @@ function Source({ api, project, id }: { api: DashboardApi; project: string; id: 
 }
 
 function Evidence({ event }: { event: AgentResultEvent }) {
+  const digest =
+    event.agentId === "gmail-urgency" ? urgentEmailDigest.safeParse(event.data) : undefined;
   return (
     <div className="evidence">
       <div className="evidence-header">
@@ -745,6 +748,35 @@ function Evidence({ event }: { event: AgentResultEvent }) {
         <p className="muted">
           Stored artifact <code>{event.artifactKey}</code>
         </p>
+      ) : digest?.success ? (
+        <div>
+          <h3>Urgent email</h3>
+          {digest.data.moreUnread && (
+            <p className="muted">Some unread messages were outside this scan.</p>
+          )}
+          {digest.data.messages.length === 0 && (
+            <p>No urgency signals found in the messages checked.</p>
+          )}
+          <ul className="findings">
+            {digest.data.messages.map((message, index) => (
+              <li key={index}>
+                <strong>{message.subject}</strong>
+                <p className="muted">
+                  {message.sender} · {date(message.receivedAt)}
+                </p>
+                <p>{message.reason}</p>
+                <a
+                  className="source-button"
+                  href={message.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open in Gmail
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <pre>{JSON.stringify(event.data, null, 2)}</pre>
       )}

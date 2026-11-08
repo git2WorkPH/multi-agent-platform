@@ -165,14 +165,18 @@ export class AwsResultStore implements ResultStore, ConsolidationResultReader {
             },
             ...(this.scheduling
               ? [
-                  markDirty(
-                    this.scheduling.table,
-                    {
-                      projectId: event.projectId,
-                      topic: event.topic,
-                    },
-                    (this.scheduling.now ?? Date.now)() + this.scheduling.debounceMs,
-                  ),
+                  ...(event.metadata.includeInConsolidation === false
+                    ? []
+                    : [
+                        markDirty(
+                          this.scheduling.table,
+                          {
+                            projectId: event.projectId,
+                            topic: event.topic,
+                          },
+                          (this.scheduling.now ?? Date.now)() + this.scheduling.debounceMs,
+                        ),
+                      ]),
                   signalChange(this.scheduling.table, event.projectId),
                 ]
               : []),

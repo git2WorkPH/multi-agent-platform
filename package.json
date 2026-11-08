@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "test:ollama-stack": "vitest run tests/ollama-stack",
     "lint": "eslint . --max-warnings 0",
-    "format": "eslint . --fix"
+    "format": "eslint . --fix",
+    "agent:gmail": "node agents/gmail-agent/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1163.0",
