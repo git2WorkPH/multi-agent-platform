@@ -17,7 +17,7 @@ The bootstrap prints the names and URLs it provisioned. It is safe to rerun with
 
 ## End-to-end walkthrough
 
-[Watch the 34-second captioned demo (WebM)](docs/media/end-to-end-walkthrough.webm?raw=1). It follows two independent agent publications through Floci ingestion, automatic consolidation, source tracing, and a forced second report revision. The recording uses the deterministic Mock provider.
+[Download the 34-second captioned demo (MP4)](docs/media/end-to-end-walkthrough.mp4?raw=1) ([WebM](docs/media/end-to-end-walkthrough.webm?raw=1)). It follows two independent agent publications through Floci ingestion, automatic consolidation, source tracing, and a forced second report revision. The recording uses the deterministic Mock provider.
 
 ## Format the code
 

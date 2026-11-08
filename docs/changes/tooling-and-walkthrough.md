@@ -5,3 +5,5 @@ Pinned pnpm 12.18.0 in the workspace and CI, regenerated the lockfile, and added
 On Node 24.22.2 and pnpm 12.18.0, frozen install, ESLint, type checking, and the dashboard build passed. The suite passed 21 unit tests, 9 live Floci tests, and the Playwright end-to-end test.
 
 The README links a captioned recording of the live local stack using the Mock provider. Browser playback verified the 33.88-second recording at 1280 × 800, including automatic and forced report revisions.
+
+GitHub served the original WebM as a download. The README now offers a smaller MP4 for broad playback support, with WebM as an alternate download.
