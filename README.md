@@ -2,18 +2,55 @@
 
 Two independent agents publish evidence to a local AWS-compatible stack. A background worker consolidates stored results into versioned reports with a deterministic Mock or local Ollama provider.
 
-Use the Node version in `.node-version`, pnpm 12.18.0, and Docker Compose.
+## Quick start
+
+Start with the built-in demo. It uses the Mock provider, so you can see a report without installing Ollama or creating an AWS account.
+
+**Before you start:** Open Docker Desktop and make sure `node --version` shows `v24.22.2` and `pnpm --version` shows `12.18.0`. Run every command from the repository folder, the one containing this README.
+
+### 1. Set up Floci
+
+In your first terminal, run these three commands:
 
 ```sh
 pnpm install --frozen-lockfile
-docker compose -f infrastructure/docker-compose.yml up -d
+docker compose -f infrastructure/docker-compose.yml up -d floci
 pnpm bootstrap
-pnpm typecheck
-pnpm test
-LOCAL_RESOURCE_PREFIX=phase1-probe-$(date +%s) pnpm test:floci
 ```
 
-The bootstrap prints the names and URLs it provisioned. It is safe to rerun with the same configuration. For overrides, export the desired variables from `.env.example` or invoke Node with `--env-file`. If changing `FLOCI_PORT`, set `LOCAL_AWS_ENDPOINT` to the matching host port. See [Floci operations](docs/operations/floci.md) for restart verification and [contract evolution](docs/architecture/decisions/001-local-substrate-and-contract.md) for the wire policy.
+When bootstrap prints queue URLs and table names, Floci is ready. If it cannot connect, wait a few seconds and run `pnpm bootstrap` again.
+
+### 2. Start the four services
+
+Open four terminal tabs in the repository folder. Run **one command per tab** and leave those tabs running.
+
+| Tab | Command |
+|---|---|
+| Result consumer | `pnpm consume:results` |
+| Consolidation worker | `AI_PROVIDER=mock pnpm work:consolidation` |
+| API | `API_AUTH_MODE=development API_DEV_PROJECTS=demo AI_PROVIDER=mock pnpm api` |
+| Dashboard | `pnpm dashboard` |
+
+Open the URL printed by the dashboard terminal, usually [http://127.0.0.1:5173](http://127.0.0.1:5173). The project should show **demo**. Leave the bearer token blank for this local setup. If port 5173 is busy, run `pnpm dashboard --port 5198` in the dashboard tab instead.
+
+### 3. Publish the demo results
+
+Go back to your first terminal and run:
+
+```sh
+pnpm agent:research
+pnpm agent:analysis
+```
+
+Each command prints an event ID and exits. In the dashboard, open **Results** to see both agents. After a few seconds, open **Reports** and select the newest **sample** report. **Mock · simulated** is the expected label. Open a **Source** button to see the original result.
+
+To try a manual run, enter `sample` in **Topic filter**, select **Force new revision**, and click **Run consolidation**. The new revision appears in **Reports** once the job completes.
+
+### 4. Stop or restart
+
+Press **Ctrl+C** in the four service tabs. Run `docker compose -f infrastructure/docker-compose.yml stop floci` to stop Floci while keeping your data. Next time, start Floci and the four services again. Run the agents again when you want fresh sample results.
+
+See [setup and troubleshooting](docs/operations/setup.md) for Ollama, environment overrides, and common errors. Developer checks are in the [verification guide](docs/testing/verification.md).
 
 ## End-to-end walkthrough
 
