@@ -148,3 +148,7 @@ pnpm agent:gmail
 ```
 
 In the dashboard, select **email**, open **Results**, and choose the newest **gmail-urgency** result. Each flagged item shows its subject, sender, received date, urgency reason, and a link to Gmail.
+
+## Review files on your Mac
+
+Run `pnpm agent:machine` to review **Downloads**, **Desktop**, and **your user Applications folder** for cleanup candidates and suspicious filename patterns. In the dashboard, select **machine → Results** and open **machine-review**. Add `machine` to your API project grant first. See [machine review setup and limits](docs/operations/machine-review-agent.md).

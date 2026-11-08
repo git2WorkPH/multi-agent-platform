@@ -6,6 +6,7 @@ import type { AgentResultEvent, ConsolidationReport, DashboardApi, ReportSummary
 import { errorMessage, useLive, usePages, useRequest } from "./state.ts";
 import "./styles.css";
 import { urgentEmailDigest } from "../../../packages/contracts/src/urgent-email.ts";
+import { machineReviewDigest } from "../../../packages/contracts/src/machine-review.ts";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 const date = (value: string | number) => dateFormat.format(new Date(value));
@@ -724,6 +725,8 @@ function Source({ api, project, id }: { api: DashboardApi; project: string; id: 
 function Evidence({ event }: { event: AgentResultEvent }) {
   const digest =
     event.agentId === "gmail-urgency" ? urgentEmailDigest.safeParse(event.data) : undefined;
+  const machine =
+    event.agentId === "machine-review" ? machineReviewDigest.safeParse(event.data) : undefined;
   return (
     <div className="evidence">
       <div className="evidence-header">
@@ -773,6 +776,35 @@ function Evidence({ event }: { event: AgentResultEvent }) {
                 >
                   Open in Gmail
                 </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : machine?.success ? (
+        <div>
+          <h3>Machine review</h3>
+          <p>Security flags are clues for review. They do not confirm malware.</p>
+          <p className="muted">
+            {machine.data.inspected} inspected · {machine.data.skipped} skipped
+          </p>
+          {machine.data.truncated && (
+            <p className="muted">
+              The scan reached a limit. Some entries or findings are outside this report.
+            </p>
+          )}
+          {!machine.data.findings.length && <p>No matching signals in the scanned entries.</p>}
+          <ul className="findings">
+            {machine.data.findings.map((finding, index) => (
+              <li key={index}>
+                <strong>
+                  {finding.category === "security" ? "Security review" : "Cleanup review"}
+                </strong>
+                <p>
+                  <bdi>
+                    <code>{finding.path.replace(/[\u202a-\u202e\u2066-\u2069]/g, "�")}</code>
+                  </bdi>
+                </p>
+                <p>{finding.reason}</p>
               </li>
             ))}
           </ul>
