@@ -129,3 +129,9 @@ pre { font-size: .8rem; background: #0e141e; border: 1px solid var(--line); bord
   .manual form { justify-content: flex-start; }
 }
 @media (max-width: 400px) { .row { align-items: flex-start; flex-wrap: wrap; } }
+
+.agent-projects { display: grid; gap: .45rem; margin-top: 1rem; }
+.agent-projects button { text-align: left; font-size: .82rem; }
+.agent-projects button[aria-pressed=true] { border-color: var(--teal); color: var(--teal); }
+.agent-projects button:disabled { cursor: default; }
+.agent-project-help { display: block; margin-top: .65rem; line-height: 1.45; }

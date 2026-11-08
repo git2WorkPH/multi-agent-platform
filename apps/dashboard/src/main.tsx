@@ -18,6 +18,10 @@ const issueLabels = {
   missing_publisher: "Missing publisher",
 };
 const tabNames = ["Results", "Reports", "Jobs", "Publishers"] as const;
+const agentProjects = [
+  { id: "email", label: "Urgent email", command: "pnpm agent:gmail" },
+  { id: "machine", label: "Mac file review", command: "pnpm agent:machine" },
+] as const;
 type Tab = (typeof tabNames)[number];
 
 function Mark() {
@@ -121,6 +125,26 @@ function App() {
               </option>
             ))}
           </select>
+          <nav aria-label="Specialty agents" className="agent-projects">
+            {agentProjects.map(({ id, label }) => (
+              <button
+                className="secondary"
+                key={id}
+                type="button"
+                aria-pressed={active === id}
+                disabled={!projects.includes(id)}
+                onClick={() => setProject(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          {projects.length > 0 && agentProjects.some(({ id }) => !projects.includes(id)) && (
+            <small className="agent-project-help">
+              To open a disabled view, add its <code>email</code> or <code>machine</code> project to
+              your API grant, then reload.
+            </small>
+          )}
         </div>
         <div className="sidebar-bottom">
           <p className="eyebrow">Inference engine</p>
@@ -186,6 +210,7 @@ function App() {
 }
 
 function Project({ api, project }: { api: DashboardApi; project: string }) {
+  const specialty = agentProjects.find(({ id }) => id === project);
   const [tab, setTab] = useState<Tab>("Results");
   const [topic, setTopic] = useState("");
   const [version, setVersion] = useState(0);
@@ -223,9 +248,15 @@ function Project({ api, project }: { api: DashboardApi; project: string }) {
           <p className="eyebrow">
             <span className="accent-dot" /> PROJECT / {project}
           </p>
-          <h1>Consolidation workspace</h1>
+          <h1>{specialty?.label ?? "Consolidation workspace"}</h1>
           <p className="subtitle">
-            Review agent evidence, monitor jobs, and trace each report to its sources.
+            {specialty ? (
+              <>
+                Run <code>{specialty.command}</code> and open the newest result below.
+              </>
+            ) : (
+              "Review agent evidence, monitor jobs, and trace each report to its sources."
+            )}
           </p>
         </div>
         <div className="live-status" role="status">
