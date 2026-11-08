@@ -1,3 +1,4 @@
+import "../../packages/core/load-env.ts";
 import { readFile } from "node:fs/promises";
 import { publishResult } from "../../packages/messaging/results.ts";
 

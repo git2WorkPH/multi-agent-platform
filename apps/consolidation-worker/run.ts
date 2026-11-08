@@ -1,3 +1,4 @@
+import "../../packages/core/load-env.ts";
 import { setTimeout as delay } from "node:timers/promises";
 import pino from "pino";
 import { localAws } from "../../infrastructure/bootstrap/resources.ts";

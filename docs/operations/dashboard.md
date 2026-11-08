@@ -6,7 +6,7 @@ Start Floci, bootstrap the resources, and run the API, result consumer, and cons
 pnpm dashboard
 ```
 
-Open `http://127.0.0.1:5174`. If that port is busy, use `pnpm dashboard --port 5198`. Vite proxies `/api` and `/health` to the loopback API. Set `DASHBOARD_API_URL` when the API listens on a different port. Use `pnpm build:dashboard` to produce `apps/dashboard/dist`. A static deployment needs a same-origin reverse proxy for those two API paths.
+Open `http://127.0.0.1:5174`. If that port is busy, set `DASHBOARD_PORT` in `.env` or use `pnpm dashboard --port 5198`. Vite proxies `/api` and `/health` to the loopback API using `API_PORT`. Set `DASHBOARD_API_URL` to override that target. Use `pnpm build:dashboard` to produce `apps/dashboard/dist`. A static deployment needs a same-origin reverse proxy for those two API paths.
 
 For token mode, enter the bearer token under API access. The dashboard keeps the token in memory. Reloading the page requires re-entry. For local development, leave the token blank and configure the API's explicit loopback development mode.
 

@@ -10,15 +10,18 @@ Start with the built-in demo. It uses the Mock provider, so you can see a report
 
 ### 1. Set up Floci
 
-In your first terminal, run these three commands:
+In your first terminal, run:
 
 ```sh
 pnpm install --frozen-lockfile
+test -f .env || cp .env.example .env
 docker compose -f infrastructure/docker-compose.yml up -d floci
 pnpm bootstrap
 ```
 
 When bootstrap prints queue URLs and table names, Floci is ready. If it cannot connect, wait a few seconds and run `pnpm bootstrap` again.
+
+The local commands load the repository's `.env` through dotenv. The example config enables the loopback demo for project `demo` and selects Mock AI. Edit your `.env` to change settings, then restart the affected services. Variables exported in the terminal take precedence. Git ignores `.env`.
 
 ### 2. Start the four services
 
@@ -27,8 +30,8 @@ Open four terminal tabs in the repository folder. Run **one command per tab** an
 | Tab | Command |
 |---|---|
 | Result consumer | `pnpm consume:results` |
-| Consolidation worker | `AI_PROVIDER=mock pnpm work:consolidation` |
-| API | `API_AUTH_MODE=development API_DEV_PROJECTS=demo AI_PROVIDER=mock pnpm api` |
+| Consolidation worker | `pnpm work:consolidation` |
+| API | `pnpm api` |
 | Dashboard | `pnpm dashboard` |
 
 Open the URL printed by the dashboard terminal, usually [http://127.0.0.1:5174](http://127.0.0.1:5174). The project should show **demo**. Leave the bearer token blank for this local setup. If port 5174 is busy, run `pnpm dashboard --port 5198` in the dashboard tab instead.

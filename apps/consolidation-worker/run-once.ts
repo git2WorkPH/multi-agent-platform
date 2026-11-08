@@ -1,3 +1,4 @@
+import "../../packages/core/load-env.ts";
 import { randomUUID } from "node:crypto";
 import { localAws } from "../../infrastructure/bootstrap/resources.ts";
 import { createModelProvider } from "../../packages/ai/index.ts";

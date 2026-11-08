@@ -164,5 +164,6 @@ export async function bootstrap(aws = localAws()) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await import("../../packages/core/load-env.ts");
   console.log(JSON.stringify(await bootstrap(), null, 2));
 }

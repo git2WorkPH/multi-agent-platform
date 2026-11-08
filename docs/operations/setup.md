@@ -6,16 +6,17 @@ Install the Node version in `.node-version`, pnpm 12.18.0, and Docker Compose. F
 
 ```sh
 pnpm install --frozen-lockfile
+test -f .env || cp .env.example .env
 docker compose -f infrastructure/docker-compose.yml up -d floci
 pnpm bootstrap
 ```
 
-Start each process in a separate terminal. Use the same `LOCAL_RESOURCE_PREFIX` and endpoint in every terminal when overriding defaults.
+Start each process in a separate terminal. Dotenv reads the repository's `.env` at startup. Exported environment variables take precedence, so use the same resource prefix and endpoint across all processes.
 
 ```sh
 pnpm consume:results
-AI_PROVIDER=mock pnpm work:consolidation
-API_AUTH_MODE=development API_DEV_PROJECTS=demo AI_PROVIDER=mock pnpm api
+pnpm work:consolidation
+pnpm api
 pnpm dashboard
 ```
 

@@ -1,3 +1,4 @@
+import "../../packages/core/load-env.ts";
 import { localAws } from "../../infrastructure/bootstrap/resources.ts";
 import { createModelProvider } from "../../packages/ai/index.ts";
 import { AwsApiQueries } from "../../packages/aws-adapters/api-queries.ts";
