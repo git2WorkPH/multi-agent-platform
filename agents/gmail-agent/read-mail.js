@@ -1,13 +1,27 @@
 // Executed by macOS JavaScript for Automation, with arguments passed separately.
 function run([address, mailboxName, limit]) {
   const mail = Application("Mail");
-  const accounts = mail
-    .accounts()
-    .filter((account) =>
-      account.emailAddresses().some((email) => email.toLowerCase() === address.toLowerCase()),
-    );
-  if (accounts.length !== 1)
-    return JSON.stringify({ error: "Select one enabled Mail account by its email address." });
+  const normalize = (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase();
+  const selection = normalize(address);
+  const enabled = mail.accounts().filter((account) => account.enabled());
+  const matches = enabled.filter(
+    (account) =>
+      (account.emailAddresses() ?? []).some((email) => normalize(email) === selection) ||
+      normalize(account.userName()) === selection,
+  );
+  const accounts = matches.length
+    ? matches
+    : enabled.filter((account) => normalize(account.name()) === selection);
+  if (accounts.length !== 1) {
+    return JSON.stringify({
+      error: accounts.length
+        ? "Multiple enabled Mail accounts match APPLE_MAIL_ACCOUNT. Use a unique account description or sign-in address."
+        : "No enabled Mail account matches APPLE_MAIL_ACCOUNT. Open Mail → Settings → Accounts and use the Gmail sign-in address or exact account description.",
+    });
+  }
   const inboxes = accounts[0]
     .mailboxes()
     .filter((mailbox) => mailbox.name().toLowerCase() === mailboxName.toLowerCase());

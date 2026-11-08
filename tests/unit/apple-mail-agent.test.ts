@@ -21,12 +21,18 @@ it("selects only the configured account and reads bounded unread metadata", () =
   const accounts = [
     {
       emailAddresses: () => ["other@example.test"],
+      enabled: () => true,
+      userName: () => "other@example.test",
+      name: () => "Other",
       mailboxes: () => {
         throw new Error("Read other account");
       },
     },
     {
-      emailAddresses: () => ["selected@example.test"],
+      emailAddresses: () => [],
+      enabled: () => true,
+      userName: () => "selected@example.test",
+      name: () => "Selected Gmail",
       mailboxes: () => [
         {
           name: () => "INBOX",

@@ -2,7 +2,7 @@
 
 ## Use Apple Mail on your Mac
 
-Add your Gmail account to Apple Mail and wait for the inbox to sync. Set `GMAIL_SOURCE=apple-mail` and `APPLE_MAIL_ACCOUNT` to that exact email address in `.env`. Add `email` to your API project grant and restart the API. Run `pnpm agent:gmail` in your normal macOS terminal, then allow that terminal to control Mail under Privacy & Security → Automation when prompted. Google OAuth credentials are unnecessary in this mode.
+Add your Gmail account to Apple Mail and wait for the inbox to sync. Set `GMAIL_SOURCE=apple-mail` and `APPLE_MAIL_ACCOUNT` to the Gmail sign-in address or exact account description from Mail → Settings → Accounts in `.env`. Add `email` to your API project grant and restart the API. Run `pnpm agent:gmail` in your normal macOS terminal, then allow that terminal to control Mail under Privacy & Security → Automation when prompted. Google OAuth credentials are unnecessary in this mode.
 
 The agent reads metadata from the selected account only. It checks unread messages, flags subjects with urgency cues and messages flagged in Apple Mail, and links to Mail when a Message-ID is available. Set `APPLE_MAIL_INBOX` if your inbox uses a name other than INBOX. The scan reflects what Mail has synced.
 
